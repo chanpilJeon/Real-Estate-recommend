@@ -1208,11 +1208,27 @@ main().finally(() => prisma.$disconnect());
 ### Step 3 — L1 모듈 (병렬 가능, 1주)
 
 **3-A. `region`**
-- [ ] `IRegionRepository` 인터페이스 + Prisma 구현
-- [ ] `RegionSearchService.search()` — 부분일치 + 동음이의 후보 반환
-- [ ] `resolveAlias()` — 생활권 별칭("미사", "판교") → 법정동 집합
-- [ ] `GET /regions/search?q=` 컨트롤러
-- [ ] 단위 테스트: "신정동"(양천구/양주시) 같은 동음이의 케이스
+
+> **진행 메모 (2026-09-04)**: 브랜치 `feat/step3a-region-search`. 검증 완료.
+> `GET /api/regions/search?q=` · `GET /api/regions/:code` 동작, 응답 5~11ms. 테스트 140개 통과.
+>
+> 확정·발견 사항:
+> - **FULLTEXT 인덱스는 한국어 지역명 검색에 쓸 수 없다.** MariaDB `innodb_ft_min_token_size=3`
+>   이라 "강남"(2글자)이 색인되지 않고 단어 중간 일치도 안 된다. 실측 `MATCH…AGAINST('강남')` → 0건.
+>   `LIKE '%강남%'` 는 14,143건에서 약 3ms 라 충분해 LIKE 로 구현했다.
+>   스키마의 `@@fulltext` 는 남겨뒀다(추후 ngram 파서 도입 시 사용 가능).
+> - **`packages/shared` 를 빌드되는 패키지로 바꿨다.** 기존에는 apps 가 shared 를 소스 경로로
+>   직접 참조해서, `pnpm build` 가 컴파일 결과물(.js/.d.ts)을 `packages/shared/src` 안에 흘렸고
+>   그 파일들이 테스트를 깨뜨렸다. 이제 shared 는 `dist` 로 빌드하고 apps 는 패키지로 참조한다.
+>   (NestJS 가 CJS 라 shared 도 CommonJS 로 낸다. vitest 는 alias 로 소스를 직접 본다.)
+> - `RegionSearchService` 는 데코레이터 없는 평범한 클래스다 — 테스트에서 가짜 저장소를 넣어
+>   `new` 로 만들 수 있게 하기 위함. 모듈에서 `useFactory` 로 조립한다.
+> - 실데이터 확인: "미사" → 별칭 4곳(alias) + 하남시 미사동(partial). "신정동" → 5곳 모두 exact.
+- [x] `IRegionRepository` 인터페이스 + Prisma 구현
+- [x] `RegionSearchService.search()` — 부분일치 + 동음이의 후보 반환
+- [x] `resolveAlias()` — 생활권 별칭("미사", "판교") → 법정동 집합
+- [x] `GET /regions/search?q=` 컨트롤러
+- [x] 단위 테스트: "신정동"(양천구/양주시) 같은 동음이의 케이스
 
 **3-B. `observability`**
 - [ ] `JobRunRecorder.run()` — 잡을 감싸 `job_runs` 자동 기록 (성공/실패/건수)

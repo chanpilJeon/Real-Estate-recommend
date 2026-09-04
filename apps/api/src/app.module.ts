@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { CoreModule } from './core';
 import { HealthController } from './health.controller';
+import { RegionModule } from './region';
 
 /**
  * 루트 모듈.
@@ -9,7 +10,7 @@ import { HealthController } from './health.controller';
  * ToDo.md 2.3 계층 순서대로 여기에 등록된다.
  */
 @Module({
-  imports: [CoreModule],
+  imports: [CoreModule, RegionModule],
   controllers: [HealthController],
   providers: [],
 })

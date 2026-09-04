@@ -19,6 +19,7 @@ export type {
   SearchConditionDto,
   ComplexSummaryDto,
   RecommendationDto,
+  RegionCandidateDto,
 } from './dto';
 
 export { APP_NAME, PRESET_NAMES, PRESET_LABELS } from './constants';

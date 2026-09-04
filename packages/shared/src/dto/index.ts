@@ -56,3 +56,20 @@ export interface RecommendationDto extends ComplexSummaryDto {
   /** "예산 대비 상위 15%", "역 도보 7분" 같은 문장 */
   reasons: string[];
 }
+
+/** 지역 검색 결과 한 건 (ToDo.md 3.3) */
+export interface RegionCandidateDto {
+  /** 법정동코드 10자리 */
+  code: string;
+  /** 국토부 실거래가 API 조회키 (앞 5자리) */
+  sigunguCode: string;
+  /** "경기도 수원시 영통구 영통동" */
+  fullName: string;
+  level: 'sido' | 'sigungu' | 'dong';
+  /**
+   * exact  = 이름이 정확히 일치 ("역삼동")
+   * alias  = 생활권 별칭으로 찾음 ("미사" → 하남시 망월동 등)
+   * partial = 이름 일부가 일치 ("강남" → 강남구)
+   */
+  matchType: 'exact' | 'alias' | 'partial';
+}

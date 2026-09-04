@@ -1,9 +1,16 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    // NestJS(apps/api)가 CommonJS 라서 shared 도 CJS 로 낸다.
+    // 번들러를 쓰는 Next.js(apps/web)는 CJS 패키지를 문제없이 읽는다.
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "rootDir": "./src",
     "outDir": "./dist",
-    "noEmit": true
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
 }
