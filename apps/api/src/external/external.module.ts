@@ -20,7 +20,8 @@ import { COMPLEX_INFO_CLIENT, GEOCODE_CLIENT, MOLIT_CLIENT } from './ports';
  */
 @Module({
   providers: [
-    FakeMolitClient,
+    // FakeMolitClient 는 생성자에 시계(now)를 받으므로 팩토리로 만든다
+    { provide: FakeMolitClient, useFactory: () => new FakeMolitClient() },
     FakeComplexInfoClient,
     FakeGeocodeClient,
     {

@@ -40,6 +40,24 @@ describe('데모 모드 가짜 클라이언트', () => {
       expect(await client.fetchTrades('99999', '202608')).toEqual([]);
     });
 
+    it('오늘보다 미래인 계약일을 만들지 않는다 (신선도 지표가 음수가 되면 안 된다)', async () => {
+      const today = new Date('2026-09-04T00:00:00Z');
+      const clamped = new FakeMolitClient(() => today);
+      const trades = await clamped.fetchTrades(강남구, '202609'); // 이번 달
+
+      expect(trades.length).toBeGreaterThan(0);
+      for (const trade of trades) {
+        expect(trade.contractedAt.getTime()).toBeLessThanOrEqual(today.getTime());
+      }
+    });
+
+    it('지난 달 데이터는 그대로 그 달 안에 있다', async () => {
+      const clamped = new FakeMolitClient(() => new Date('2026-09-04T00:00:00Z'));
+      for (const trade of await clamped.fetchTrades(강남구, '202607')) {
+        expect(trade.contractedAt.getUTCMonth()).toBe(6);
+      }
+    });
+
     it('계약일이 요청한 달 안에 있다', async () => {
       for (const trade of await client.fetchTrades(강남구, '202608')) {
         expect(trade.contractedAt.getUTCFullYear()).toBe(2026);

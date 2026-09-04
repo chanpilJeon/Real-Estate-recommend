@@ -9,6 +9,7 @@ import { ExternalModule } from './external';
 import { HealthController } from './health.controller';
 import { ObservabilityModule } from './observability';
 import { RegionModule } from './region';
+import { TradeModule } from './trade';
 
 /**
  * 루트 모듈.
@@ -25,6 +26,7 @@ import { RegionModule } from './region';
     ExternalModule,
     RegionModule,
     ComplexModule,
+    TradeModule,
     AdminAuthModule,
   ],
   controllers: [HealthController],
