@@ -3,6 +3,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AdminAuthModule } from './admin-auth';
+import { ComplexModule } from './complex';
 import { CoreModule } from './core';
 import { ExternalModule } from './external';
 import { HealthController } from './health.controller';
@@ -23,6 +24,7 @@ import { RegionModule } from './region';
     ObservabilityModule,
     ExternalModule,
     RegionModule,
+    ComplexModule,
     AdminAuthModule,
   ],
   controllers: [HealthController],

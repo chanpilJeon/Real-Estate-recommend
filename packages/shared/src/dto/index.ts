@@ -73,3 +73,21 @@ export interface RegionCandidateDto {
    */
   matchType: 'exact' | 'alias' | 'partial';
 }
+
+/** 단지 상세 (GET /complexes/:id) */
+export interface ComplexDetailDto extends ComplexSummaryDto {
+  kaptCode: string | null;
+  buildingCount: number;
+  parkingCount: number;
+  /** 세대당 주차 대수. 세대수를 모르면 null */
+  parkingPerHousehold: number | null;
+  heatingType: string | null;
+  approvalDate: string | null;
+  /** 연식(년). 사용승인일·건축년도가 모두 없으면 null */
+  ageYears: number | null;
+  /** 단지 품질 점수 0~1 (세대수·연식·주차) */
+  qualityScore: number;
+  /** "1,284세대 대단지" 같은 사람이 읽는 근거 */
+  qualityReasons: string[];
+  isLargeScale: boolean;
+}

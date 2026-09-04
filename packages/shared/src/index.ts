@@ -18,6 +18,7 @@ export type {
   PaginatedDto,
   SearchConditionDto,
   ComplexSummaryDto,
+  ComplexDetailDto,
   RecommendationDto,
   RegionCandidateDto,
 } from './dto';

@@ -1309,9 +1309,29 @@ main().finally(() => prisma.$disconnect());
 - [x] `ApiQuotaTracker` 연동
 
 **4-B. `complex`**
-- [ ] `IComplexRepository` + Prisma 구현 (`upsertMany` 벌크)
-- [ ] 도메인 모델 `Complex` (+ `qualityScore()`, `ageYears()`)
-- [ ] `GET /complexes/:id` 컨트롤러
+
+> **진행 메모 (2026-09-04)**: 브랜치 `feat/step4b-complex`. 테스트 47개 추가(총 357개).
+> 실 DB 로 upsert 멱등성 확인 — 재실행 시 `inserted 0 / updated 5`.
+>
+> 확정한 사항:
+> - `qualityScore()` 가중치: 세대수 0.35 / 연식 0.40 / 주차 0.25 (합 1.0).
+>   만점 기준 — 1,500세대·신축·세대당 1.0대. 30년 초과는 연식 0점으로 바닥.
+>   **자료가 없는 항목은 0점이 아니라 중립 0.5** 를 준다. 정보가 빠졌다는 이유로
+>   부당하게 밀려나면 안 된다. (연식 미상 단지가 50년 된 단지보다 높게 나오는지 테스트로 고정)
+> - **연식은 달력 기준으로 센다.** 처음에 일수÷365.25 로 했더니 "정확히 30년"이 29년으로
+>   떨어졌다. 생일 세듯 연/월/일을 비교하도록 고치고 경계 테스트를 추가했다.
+> - `normalizeComplexName()` 을 complex(L2)에 둔다. 매칭 모듈(L3)이 이것을 가져다 쓴다 —
+>   반대 방향이면 계층 위반이다. 브랜드명 축약·단지번호 제거는 **일부러 하지 않는다**
+>   (과하게 지우면 서로 다른 단지가 합쳐진다).
+> - **upsert 를 Prisma `upsert` 에 맡기지 않는다.** 유니크 키 `(regionCode, nameNormalized, builtYear)`
+>   는 builtYear 가 NULL 이면 MySQL 이 서로 다른 행으로 본다(NULL != NULL).
+>   kaptCode 가 있으면 그것으로, 없으면 직접 조회해 신규/갱신을 가른다.
+> - 없는 지역코드는 외래키 오류 대신 `skipped` 로 세고 넘어간다.
+> - `ComplexDetailDto.medianPriceManwon` 은 항상 null 이다 —
+>   가격 집계는 trade 모듈(4-C)만 한다 (ToDo.md 3.8 캡슐화). 테스트로 고정해 뒀다.
+- [x] `IComplexRepository` + Prisma 구현 (`upsertMany` 벌크)
+- [x] 도메인 모델 `Complex` (+ `qualityScore()`, `ageYears()`)
+- [x] `GET /complexes/:id` 컨트롤러
 
 **4-C. `trade`**
 - [ ] `ITradeRepository` + `bulkUpsert` (sourceHash 기반 중복 차단)
