@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 
+import { AdminAuthModule } from './admin-auth';
 import { CoreModule } from './core';
 import { HealthController } from './health.controller';
 import { ObservabilityModule } from './observability';
@@ -12,7 +14,15 @@ import { RegionModule } from './region';
  * ToDo.md 2.3 계층 순서대로 여기에 등록된다.
  */
 @Module({
-  imports: [CoreModule, ScheduleModule.forRoot(), ObservabilityModule, RegionModule],
+  imports: [
+    CoreModule,
+    ScheduleModule.forRoot(),
+    // 무차별 대입 방지 기본값. 실제 적용은 라우트마다 @UseGuards(ThrottlerGuard) 로 지정한다.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
+    ObservabilityModule,
+    RegionModule,
+    AdminAuthModule,
+  ],
   controllers: [HealthController],
   providers: [],
 })

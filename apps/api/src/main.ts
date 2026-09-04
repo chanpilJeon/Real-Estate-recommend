@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
 import { AppConfig, LOGGER, type ILogger } from './core';
@@ -11,6 +12,8 @@ async function bootstrap(): Promise<void> {
   const config = app.get(AppConfig);
   const logger = app.get<ILogger>(LOGGER);
 
+  // 관리자 세션 쿠키를 읽기 위해
+  app.use(cookieParser());
   // 프론트(Next.js, 3000번)에서 API(4000번)를 부를 수 있게 허용
   app.enableCors({ origin: true, credentials: true });
   app.setGlobalPrefix('api');

@@ -1254,10 +1254,29 @@ main().finally(() => prisma.$disconnect());
 - [x] `MetricsService` — 데이터/서비스 지표 집계 쿼리
 
 **3-C. `admin-auth`**
-- [ ] `PasswordPolicy` (순수 함수, 단위 테스트)
-- [ ] `AdminAuthService` — 로그인/세션/비밀번호 변경/잠금
-- [ ] `AdminGuard` + `@nestjs/throttler` rate limit
-- [ ] `POST /admin/auth/{login,logout,change-password}`
+
+> **진행 메모 (2026-09-04)**: 브랜치 `feat/step3c-admin-auth`. 검증 완료.
+> 단위 테스트 57개 + 실제 서버로 로그인 전 과정 확인. 테스트 총 241개.
+>
+> 확정한 사항:
+> - 세션 토큰은 **원본을 DB 에 저장하지 않는다.** 32바이트 난수를 쿠키로 주고
+>   DB 에는 sha256 해시만 둔다. DB 가 유출돼도 그 값으로 로그인할 수 없다.
+> - 쿠키는 `httpOnly` — 자바스크립트가 토큰을 읽지 못한다. 운영에서는 `secure` 도 켜진다.
+> - 없는 계정으로 시도해도 **더미 해시와 대조**해 응답 시간을 맞춘다
+>   (시간 차이로 계정 존재 여부가 새지 않도록).
+> - `bcryptjs` 를 `IPasswordHasher` 뒤에 숨겼다. cost 12 는 1건당 약 250ms 라
+>   단위 테스트에서 가짜 해셔를 쓰기 위함 (실제 bcrypt 는 별도 테스트 5건으로 확인).
+> - `AdminSessionCleanupJob` 은 observability 의 `JobRunRecorder` 를 쓰지 않는다 —
+>   둘 다 L1 이라 서로 참조하면 계층 규칙 위반이다. ILogger(L0)만 쓴다.
+> - `AdminUserRecord`(passwordHash 포함)는 배럴에서 내보내지 않는다.
+>
+> 실제 서버 확인: 없는 아이디/틀린 비밀번호 응답 동일, 비로그인 401,
+> 정책 위반 사유 일괄 안내, 변경 시 기존 세션 전부 무효화, 5회 실패 시 15분 잠금
+> (잠긴 뒤에는 올바른 비밀번호도 거부). 테스트 후 계정은 admin/12345 로 복구.
+- [x] `PasswordPolicy` (순수 함수, 단위 테스트)
+- [x] `AdminAuthService` — 로그인/세션/비밀번호 변경/잠금
+- [x] `AdminGuard` + `@nestjs/throttler` rate limit
+- [x] `POST /admin/auth/{login,logout,change-password}`
 
 ---
 
