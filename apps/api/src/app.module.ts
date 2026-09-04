@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { CoreModule } from './core';
 import { HealthController } from './health.controller';
+import { ObservabilityModule } from './observability';
 import { RegionModule } from './region';
 
 /**
@@ -10,7 +12,7 @@ import { RegionModule } from './region';
  * ToDo.md 2.3 계층 순서대로 여기에 등록된다.
  */
 @Module({
-  imports: [CoreModule, RegionModule],
+  imports: [CoreModule, ScheduleModule.forRoot(), ObservabilityModule, RegionModule],
   controllers: [HealthController],
   providers: [],
 })
