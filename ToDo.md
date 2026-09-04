@@ -1283,12 +1283,30 @@ main().finally(() => prisma.$disconnect());
 ### Step 4 — L2 모듈 (병렬 가능, 1.5주)
 
 **4-A. `external` (어댑터)**
-- [ ] `IMolitClient` 인터페이스 + `MolitHttpClient` (XML 파싱, 3회 백오프 재시도)
-- [ ] `IComplexInfoClient` + 구현
-- [ ] `IGeocodeClient` + 카카오 구현
-- [ ] **`FakeMolitClient` / `FakeGeocodeClient`** — 고정 샘플 응답 (테스트·데모 모드)
-- [ ] `AppConfig.demoMode`에 따라 DI가 Fake를 주입하도록 모듈 설정
-- [ ] `ApiQuotaTracker` 연동
+
+> **진행 메모 (2026-09-04)**: 브랜치 `feat/step4a-external-adapters`. 테스트 69개.
+>
+> ⚠ **HTTP 클라이언트는 실제 API 키로 검증하지 못했다.** 공개 스펙 문서만 보고 작성했다.
+>   키를 받으면 `docs/API-VERIFICATION.md` 절차대로 반드시 대조할 것.
+>   데모 모드(Fake)는 검증 완료 — 지금 개발·화면 확인에는 지장이 없다.
+>
+> 확정한 사항:
+> - **국토부 필드명이 한글↔영문 두 벌**이라 파서가 둘 다 받는다
+>   (`dealAmount`/`거래금액`, `aptNm`/`아파트` …). 스펙이 또 바뀌면 별칭만 추가하면 된다.
+> - 게이트웨이 오류코드를 조치 가능한 한국어로 옮긴다
+>   (코드 30 → "MOLIT_API_KEY 를 넣으세요", 코드 22 → "일일 한도 초과").
+> - 카카오는 **x=경도, y=위도**다. 뒤바뀌면 단지가 지도 반대편에 찍히므로 회귀 테스트를 뒀다.
+>   401 오류 문구에 "REST 키와 JavaScript 키는 다르다"를 명시했다 — 가장 흔한 실수.
+> - 재시도는 5xx·429·408·네트워크 오류만. 400/401/404 는 다시 보내도 같고 한도만 축낸다.
+> - **가짜 데이터는 난수를 쓰지 않는다.** 같은 (시군구, 연월)이면 항상 같은 결과여야
+>   "수집이 제대로 됐는지" 판단할 수 있다. 해제 거래도 20건에 1건씩 섞어 필터링을 시험한다.
+> - 데모 모드로 뜨면 기동 로그에 경고를 남긴다 — 가짜 데이터를 진짜로 착각하지 않도록.
+- [~] `IMolitClient` + `MolitHttpClient` 작성 완료 / **실제 키로 미검증** — docs/API-VERIFICATION.md 참조
+- [x] `IComplexInfoClient` + 구현
+- [x] `IGeocodeClient` + 카카오 구현
+- [x] **`FakeMolitClient` / `FakeGeocodeClient`** — 고정 샘플 응답 (테스트·데모 모드)
+- [x] `AppConfig.demoMode`에 따라 DI가 Fake를 주입하도록 모듈 설정
+- [x] `ApiQuotaTracker` 연동
 
 **4-B. `complex`**
 - [ ] `IComplexRepository` + Prisma 구현 (`upsertMany` 벌크)

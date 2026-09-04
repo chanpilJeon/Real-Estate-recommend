@@ -4,6 +4,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AdminAuthModule } from './admin-auth';
 import { CoreModule } from './core';
+import { ExternalModule } from './external';
 import { HealthController } from './health.controller';
 import { ObservabilityModule } from './observability';
 import { RegionModule } from './region';
@@ -20,6 +21,7 @@ import { RegionModule } from './region';
     // 무차별 대입 방지 기본값. 실제 적용은 라우트마다 @UseGuards(ThrottlerGuard) 로 지정한다.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     ObservabilityModule,
+    ExternalModule,
     RegionModule,
     AdminAuthModule,
   ],
