@@ -7,10 +7,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# pnpm 을 사용자 폴더에 설치하는 경우를 대비해 PATH 를 미리 잡아둔다.
+# /usr/local/bin 이 관리자 소유라 pnpm·docker 가 사용자 폴더에 설치되는 경우가 있다.
+# 그 경로들을 PATH 에 미리 넣어둔다 (없으면 "설치 안 됨"으로 잘못 판단한다).
 USER_BIN="$HOME/.local/bin"
 mkdir -p "$USER_BIN"
-case ":$PATH:" in *":$USER_BIN:"*) ;; *) export PATH="$USER_BIN:$PATH" ;; esac
+for extra in "$USER_BIN" "$HOME/.docker/bin" "/Applications/Docker.app/Contents/Resources/bin"; do
+  case ":$PATH:" in *":$extra:"*) ;; *) [ -d "$extra" ] && export PATH="$extra:$PATH" ;; esac
+done
 
 RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; BOLD=$'\033[1m'; OFF=$'\033[0m'
 fail() { echo "${RED}${BOLD}✗ $1${OFF}"; shift; for l in "$@"; do echo "  $l"; done; exit 1; }
@@ -93,10 +96,18 @@ fi
 echo
 echo "${BOLD}==> 5/6  데이터베이스 표 만들기 + 초기 데이터${OFF}"
 if [ "$USE_DOCKER" = "1" ]; then
-  pnpm prisma migrate dev --name init
-  [ -f scripts/seed-region.ts ] && pnpm tsx scripts/seed-region.ts || warn "법정동 코드 시드는 Step 2 에서 추가됩니다"
-  [ -f scripts/seed-admin.ts ]  && pnpm tsx scripts/seed-admin.ts  || true
-  if grep -q '^DEMO_MODE=true' .env && [ -f scripts/seed-demo.ts ]; then
+  pnpm prisma migrate dev
+  pnpm tsx scripts/seed-admin.ts
+
+  if [ -f data/legal-dong-codes.txt ]; then
+    pnpm tsx scripts/seed-region.ts
+  else
+    warn "법정동 코드 파일이 없어 지역 데이터를 넣지 못했습니다."
+    echo "    → 지역 검색을 쓰려면 data/README.md 안내대로 파일을 내려받은 뒤"
+    echo "      'pnpm seed:region' 을 실행하세요. (다른 기능은 그대로 동작합니다)"
+  fi
+
+  if [ -f scripts/seed-demo.ts ]; then
     pnpm tsx scripts/seed-demo.ts
   fi
 else

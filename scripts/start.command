@@ -6,8 +6,10 @@
 # ─────────────────────────────────────────────────────────────
 cd "$(dirname "$0")/.."
 
-# pnpm 이 사용자 폴더에 설치된 경우를 대비
-case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
+# pnpm·docker 가 사용자 폴더에 설치된 경우를 대비
+for extra in "$HOME/.local/bin" "$HOME/.docker/bin" "/Applications/Docker.app/Contents/Resources/bin"; do
+  case ":$PATH:" in *":$extra:"*) ;; *) [ -d "$extra" ] && export PATH="$extra:$PATH" ;; esac
+done
 
 echo "======================================"
 echo "  아파트 매물 추천 서비스를 시작합니다"

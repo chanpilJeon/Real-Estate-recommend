@@ -1169,10 +1169,24 @@ main().finally(() => prisma.$disconnect());
 
 ### Step 2 — DB 스키마 확정 (`core` 의존, 2~3일)
 
-- [ ] 4.2절 Prisma 스키마 전체 작성
-- [ ] `prisma migrate dev` — 초기 마이그레이션 생성
-- [ ] `scripts/seed-region.ts` — 법정동 코드 CSV(code.go.kr) 적재 + 별칭 사전 초기값
-- [ ] 인덱스 검증: `EXPLAIN`으로 중위가 조회 쿼리가 복합 인덱스를 타는지 확인
+> **진행 메모 (2026-09-04)**: 브랜치 `feat/step2-db-schema`.
+> Docker Desktop 설치 후 MariaDB 11 기동 → 마이그레이션 `20260904105200_init` 적용 완료 (테이블 19개).
+> `/api/health` 가 `database.ok: true` 로 응답.
+>
+> 확인·확정한 사항:
+> - MariaDB 에서 `@@fulltext` 인덱스 정상 생성됨 (regions).
+> - EXPLAIN 검증: 중위가 조회가 `(complex_id, exclusive_sqm, contracted_at)` 복합 인덱스를
+>   range 스캔으로 사용(표본 5,000건 중 309건만 접근), 정렬 추가 비용 없음.
+>   `MAX(contracted_at)` 은 `Select tables optimized away` 로 O(1).
+> - `prisma migrate dev` 는 shadow DB 생성 권한이 필요해 `docker/mariadb-init/01-grant-dev.sql` 추가.
+>   **로컬 전용**이다 — 운영은 `migrate deploy` 라 shadow DB 가 필요 없다.
+> - 이 Mac 은 `/usr/local/bin` 이 root 소유라 pnpm·docker CLI 가 사용자 폴더에 설치된다.
+>   `setup.sh` / `start.command` 가 `~/.local/bin`·`~/.docker/bin` 을 PATH 에 넣도록 처리.
+
+- [x] 4.2절 Prisma 스키마 전체 작성
+- [x] `prisma migrate dev` — 초기 마이그레이션 생성
+- [~] `scripts/seed-region.ts` — 스크립트·파서·별칭 사전 작성 완료 / **원본 파일(code.go.kr) 미확보로 적재 대기**
+- [x] 인덱스 검증: `EXPLAIN`으로 중위가 조회 쿼리가 복합 인덱스를 타는지 확인
 - [ ] `pnpm prisma studio`로 테이블 구조 육안 확인
 
 **🧪 테스트 지점 M2**: Prisma Studio에서 법정동 데이터가 들어왔는지 확인
