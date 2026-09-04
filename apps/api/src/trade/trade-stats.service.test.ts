@@ -75,6 +75,9 @@ class FakeTradeRepository implements ITradeRepository {
   distinctAreas(): Promise<number[]> {
     return Promise.resolve([59.94, 84.97]);
   }
+  relinkByRawName(): Promise<number> {
+    return Promise.resolve(0);
+  }
 }
 
 describe('TradeStatsService — 가격 통계', () => {

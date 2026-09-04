@@ -153,6 +153,20 @@ export class PrismaTradeRepository implements ITradeRepository {
     return rows.map((r) => Number(r.exclusiveSqm));
   }
 
+  async relinkByRawName(regionCode: string, rawName: string, complexId: number): Promise<number> {
+    const [trades, rents] = await Promise.all([
+      this.prisma.trade.updateMany({
+        where: { regionCode, rawName, complexId: null },
+        data: { complexId },
+      }),
+      this.prisma.rent.updateMany({
+        where: { regionCode, rawName, complexId: null },
+        data: { complexId },
+      }),
+    ]);
+    return trades.count + rents.count;
+  }
+
   private whereOf(query: TradeQuery): Prisma.TradeWhereInput {
     return {
       complexId: query.complexId,

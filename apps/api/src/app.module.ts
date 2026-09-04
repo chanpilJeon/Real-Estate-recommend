@@ -7,6 +7,7 @@ import { ComplexModule } from './complex';
 import { CoreModule } from './core';
 import { ExternalModule } from './external';
 import { HealthController } from './health.controller';
+import { MatchingModule } from './matching';
 import { ObservabilityModule } from './observability';
 import { RegionModule } from './region';
 import { TradeModule } from './trade';
@@ -27,6 +28,7 @@ import { TradeModule } from './trade';
     RegionModule,
     ComplexModule,
     TradeModule,
+    MatchingModule,
     AdminAuthModule,
   ],
   controllers: [HealthController],

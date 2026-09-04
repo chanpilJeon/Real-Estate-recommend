@@ -61,5 +61,12 @@ export interface ITradeRepository {
   countTrades(complexId: number, since: Date): Promise<number>;
   /** 단지에 존재하는 전용면적 목록 */
   distinctAreas(complexId: number): Promise<number[]>;
+
+  /**
+   * 매칭 실패로 단지에 붙지 못한 거래를 뒤늦게 이어붙인다.
+   * 관리자가 수동 보정하면 **과거 데이터까지 되살아난다** —
+   * `rawName` 을 보존해 둔 이유가 이것이다 (ToDo.md 4.3).
+   */
+  relinkByRawName(regionCode: string, rawName: string, complexId: number): Promise<number>;
 }
 export const TRADE_REPOSITORY = Symbol('ITradeRepository');
