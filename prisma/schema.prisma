@@ -1,4 +1,4 @@
-// Prisma 스키마 — Step 0 에서는 연결 설정만 잡아둔다.
+// Prisma 스키마 — Step 0~1 에서는 연결 설정만 잡아둔다.
 // 실제 모델(regions / complexes / trades …) 전체 정의는 Step 2 에서 작성한다.
 // (ToDo.md 4.2절)
 
@@ -11,10 +11,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
-/// 연결 확인용 최소 모델. Step 2 에서 실제 스키마로 대체된다.
-model HealthCheck {
-  id        Int      @id @default(autoincrement())
-  checkedAt DateTime @default(now()) @map("checked_at")
+/// Step 2 에서 실제 스키마로 대체되는 임시 모델.
+/// Prisma 는 모델이 하나도 없으면 클라이언트를 만들지 못하기 때문에 자리만 잡아둔다.
+/// ※ 모델 이름은 코드의 메서드명과 겹치지 않게 짓는다 —
+///   과거 `HealthCheck` 로 뒀다가 PrismaService.healthCheck() 와 충돌했다.
+model PlaceholderUntilStep2 {
+  id Int @id @default(autoincrement())
 
-  @@map("health_check")
+  @@map("_placeholder_until_step2")
 }

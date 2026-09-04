@@ -15,6 +15,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['packages/shared/src/**', 'apps/api/src/**'],
+      exclude: [
+        // 배럴(재수출)과 프레임워크 배선 코드는 단위 테스트 대상이 아니다.
+        // 이들은 실제 서버 기동으로 검증한다.
+        '**/index.ts',
+        '**/*.module.ts',
+        '**/main.ts',
+      ],
       reporter: ['text', 'html'],
     },
   },

@@ -78,6 +78,16 @@ module.exports = {
   },
   overrides: [
     {
+      // NestJS 는 생성자 파라미터의 '런타임' 타입 정보로 의존성을 주입한다
+      // (emitDecoratorMetadata). `import type` 으로 바꾸면 그 정보가 사라져
+      // "Nest can't resolve dependencies" 로 서버가 죽는다.
+      // 자동수정이 이 사고를 반복하지 않도록 apps/api 에서는 규칙을 끈다.
+      files: ['apps/api/src/**/*.ts'],
+      rules: {
+        '@typescript-eslint/consistent-type-imports': 'off',
+      },
+    },
+    {
       // ToDo.md 3.2 캡슐화 규칙: process.env는 core/AppConfig 밖에서 읽지 않는다.
       files: ['apps/api/src/**/*.ts'],
       excludedFiles: ['apps/api/src/core/**/*.ts', 'apps/api/src/main.ts'],

@@ -1143,14 +1143,27 @@ main().finally(() => prisma.$disconnect());
 
 ### Step 1 — `packages/shared` + `core` (의존 없음, 3~4일)
 
-- [ ] 값 객체 `Money` — 만원/원 변환, 한국어 표기(`"8억 5,000만원"`), 범위 비교
-- [ ] 값 객체 `Area` — m²/평 변환, 타입 라벨
-- [ ] 값 객체 `RegionCode` — 10자리 검증, 시군구코드 추출
-- [ ] 값 객체 `Coordinate` — Haversine 거리, 도보 분 환산
-- [ ] 공용 DTO 인터페이스 (`SearchConditionDto`, `ComplexSummaryDto`, `RecommendationDto`)
-- [ ] `AppConfig.load()` — 필수 환경변수 누락 시 **기동 실패**
-- [ ] `ILogger` (Pino 구현) / `PrismaService` (+ `healthCheck()`)
-- [ ] **단위 테스트**: 값 객체 변환·경계값 (DB 불필요, 여기서 100% 커버리지 목표)
+> **진행 메모 (2026-09-04)**: 브랜치 `feat/step1-value-objects-core`. 검증 완료.
+> 테스트 97개 통과 / 값 객체·AppConfig·errors 커버리지 100%.
+> `logger`·`PrismaService`·컨트롤러는 NestJS DI·DB 가 필요해 단위 테스트 대신
+> **실제 서버 기동으로 확인**했다 (`/api/health` 200, DB 미연결 시 degraded 응답).
+>
+> 구현 중 확정한 사항:
+> - `Area.toTypeLabel()` 은 반올림이 아니라 **내림** — "84.97㎡ → 84타입" 이라는 한국 관례에 맞춘다.
+> - `DEMO_MODE` 는 `TRUE`/`1`/`yes` 도 참으로 읽는다 — .env 표기 하나로 엉뚱한 오류를 만나지 않게.
+> - Prisma 임시 모델명을 `HealthCheck` → `PlaceholderUntilStep2` 로 변경. 생성된 델리게이트가
+>   `PrismaService.healthCheck()` 와 이름 충돌했다.
+> - `apps/api` 에서 ESLint `consistent-type-imports` 를 껐다. `import type` 으로 바뀌면
+>   NestJS 가 의존성을 주입하지 못해 서버가 죽는다.
+
+- [x] 값 객체 `Money` — 만원/원 변환, 한국어 표기(`"8억 5,000만원"`), 범위 비교
+- [x] 값 객체 `Area` — m²/평 변환, 타입 라벨
+- [x] 값 객체 `RegionCode` — 10자리 검증, 시군구코드 추출
+- [x] 값 객체 `Coordinate` — Haversine 거리, 도보 분 환산
+- [x] 공용 DTO 인터페이스 (`SearchConditionDto`, `ComplexSummaryDto`, `RecommendationDto`)
+- [x] `AppConfig.load()` — 필수 환경변수 누락 시 **기동 실패**
+- [x] `ILogger` (Pino 구현) / `PrismaService` (+ `healthCheck()`)
+- [x] **단위 테스트**: 값 객체 변환·경계값 (DB 불필요, 여기서 100% 커버리지 목표)
 
 ---
 
