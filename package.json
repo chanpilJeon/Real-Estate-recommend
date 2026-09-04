@@ -13,6 +13,7 @@
     "typecheck": "turbo run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
+    "clean": "rm -rf apps/web/.next apps/web/.next-build apps/api/dist .turbo && echo \"빌드 캐시를 지웠습니다. pnpm dev 로 다시 실행하세요.\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prisma": "prisma",

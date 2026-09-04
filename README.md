@@ -95,6 +95,37 @@ pnpm format        # 코드 포맷 정리
 pnpm prisma studio # DB 내용을 브라우저로 확인
 ```
 
+### 문제가 생겼을 때
+
+**화면에 `Server error` / `Internal Server Error` 가 뜬다**
+
+빌드 캐시가 꼬인 경우가 대부분입니다. 아래 순서로 복구합니다.
+
+```bash
+pnpm clean   # 빌드 캐시 삭제
+pnpm dev     # 다시 실행
+```
+
+> 참고: 개발 서버(`pnpm dev`)가 켜진 상태에서 `pnpm build` 를 돌리면 서로 파일이 충돌해
+> 이 오류가 났었습니다. 지금은 `next.config.mjs` 에서 개발용(`.next`)과 빌드용(`.next-build`)
+> 폴더를 분리해 두어 충돌하지 않습니다.
+
+**`pnpm: command not found`**
+
+터미널을 완전히 닫았다가 다시 열어 보세요. 그래도 안 되면:
+
+```bash
+corepack enable --install-directory ~/.local/bin
+```
+
+**포트가 이미 사용 중이라고 나온다**
+
+이전에 켜둔 서버가 남아 있는 경우입니다.
+
+```bash
+pkill -f "turbo run dev"
+```
+
 ### 기술 스택
 
 | 레이어 | 기술 |
