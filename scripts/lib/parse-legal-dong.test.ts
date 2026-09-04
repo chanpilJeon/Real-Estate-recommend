@@ -39,6 +39,15 @@ describe('법정동코드 파서', () => {
       });
     });
 
+    it('시군구 단계가 없는 시(세종)의 시군구 행은 시도명으로 채운다', () => {
+      // 이 행이 국토부 실거래가 API 조회키(36110)를 담고 있어 비워두면 세종시 수집이 안 된다
+      expect(splitName('세종특별자치시', 'sigungu')).toEqual({
+        sido: '세종특별자치시',
+        sigungu: '세종특별자치시',
+        dong: null,
+      });
+    });
+
     it('시군구 단위는 동이 없다', () => {
       expect(splitName('서울특별시 종로구', 'sigungu')).toEqual({
         sido: '서울특별시',

@@ -30,13 +30,23 @@ function readTextAutoEncoding(path: string): string {
 }
 
 async function seedRegions(rows: ParsedRegion[]): Promise<{ created: number; updated: number }> {
-  const existing = await prisma.region.findMany({ select: { code: true, isActive: true } });
-  const existingMap = new Map(existing.map((r) => [r.code, r.isActive]));
+  const existing = await prisma.region.findMany();
+  const existingMap = new Map(existing.map((r) => [r.code, r]));
 
   const toCreate = rows.filter((r) => !existingMap.has(r.code));
-  const toUpdate = rows.filter(
-    (r) => existingMap.has(r.code) && existingMap.get(r.code) !== r.isActive,
-  );
+  // 이름·폐지여부 중 하나라도 달라지면 갱신한다.
+  // (행정구역 통폐합·개칭이 실제로 일어난다 — 예: 광주광역시+전라남도 통합)
+  const toUpdate = rows.filter((r) => {
+    const prev = existingMap.get(r.code);
+    if (prev === undefined) return false;
+    return (
+      prev.sido !== r.sido ||
+      prev.sigungu !== r.sigungu ||
+      prev.dong !== r.dong ||
+      prev.sigunguCode !== r.sigunguCode ||
+      prev.isActive !== r.isActive
+    );
+  });
 
   for (let i = 0; i < toCreate.length; i += CHUNK) {
     await prisma.region.createMany({ data: toCreate.slice(i, i + CHUNK), skipDuplicates: true });
@@ -45,7 +55,16 @@ async function seedRegions(rows: ParsedRegion[]): Promise<{ created: number; upd
   if (toCreate.length > 0) process.stdout.write('\n');
 
   for (const row of toUpdate) {
-    await prisma.region.update({ where: { code: row.code }, data: { isActive: row.isActive } });
+    await prisma.region.update({
+      where: { code: row.code },
+      data: {
+        sigunguCode: row.sigunguCode,
+        sido: row.sido,
+        sigungu: row.sigungu,
+        dong: row.dong,
+        isActive: row.isActive,
+      },
+    });
   }
 
   return { created: toCreate.length, updated: toUpdate.length };

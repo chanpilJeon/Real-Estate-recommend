@@ -43,7 +43,10 @@ export function splitName(fullName: string, level: RegionLevel): Omit<ParsedRegi
   }
 
   if (level === 'sigungu') {
-    return { sido, sigungu: tokens.slice(1).join(' '), dong: null };
+    // 세종특별자치시처럼 시군구 단계가 따로 없는 곳은 이름이 한 단어뿐이다.
+    // 이 행이 국토부 API 조회키(시군구코드)를 담고 있으므로 비워두면 안 된다.
+    const rest = tokens.slice(1).join(' ');
+    return { sido, sigungu: rest === '' ? sido : rest, dong: null };
   }
 
   // 읍면동 단위: 마지막 토큰이 동, 그 사이가 시군구
