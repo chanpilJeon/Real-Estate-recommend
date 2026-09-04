@@ -1,0 +1,27 @@
+# 로컬 개발용 MariaDB.
+# 운영(EC2)에서도 같은 구조로 돌린다 — ToDo.md 5절 "로컬 = 운영 동일 구조" 원칙.
+services:
+  db:
+    image: mariadb:11
+    container_name: apt-finder-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpw
+      MARIADB_DATABASE: apt_finder
+      MARIADB_USER: apt
+      MARIADB_PASSWORD: aptpw
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - '3306:3306'
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  db-data:

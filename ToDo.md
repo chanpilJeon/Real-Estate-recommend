@@ -1048,17 +1048,21 @@ model SearchEvent {
 
 ### Step 0 — 리포지토리·개발환경 (의존 없음, 1~2일)
 
-- [ ] pnpm workspace 모노레포 초기화 (`apps/web`, `apps/api`, `packages/shared`)
-- [ ] `docker-compose.yml` — MariaDB 11 (포트 3306, 볼륨 영속화, healthcheck)
-- [ ] Prisma 초기화 + MariaDB 연결 확인
-- [ ] ESLint + Prettier + tsconfig 공통 설정
-- [ ] **ESLint `import/no-restricted-paths` 규칙 추가** — 2.3 의존성 그래프 역방향 import 차단
-- [ ] Vitest 설정 (단위 테스트가 DB 없이 도는지 확인)
-- [ ] `.env.example` (`DATABASE_URL`, `MOLIT_API_KEY`, `KAKAO_REST_KEY`, `KAKAO_JS_KEY`, `ADMIN_SESSION_SECRET`, `DEMO_MODE`)
-- [ ] `scripts/setup.sh` (아래 전문)
-- [ ] `scripts/start.command` — macOS 더블클릭 실행용 래퍼 (비기술자용)
-- [ ] `pnpm dev` 루트 스크립트 (turbo로 web+api 동시 기동)
-- [ ] README에 `git clone → ./scripts/setup.sh → pnpm dev` 3줄 온보딩
+> **진행 메모 (2026-09-04)**: 브랜치 `feat/step0-monorepo-setup` 에서 파일 작성 완료.
+> 로컬에 Node.js·Docker 가 아직 설치되지 않아 **실제 실행 검증(M1)은 대기 중**이다.
+> `[x]` = 파일 작성 완료, `[~]` = 작성했으나 실행 검증 전.
+
+- [x] pnpm workspace 모노레포 초기화 (`apps/web`, `apps/api`, `packages/shared`)
+- [x] `docker-compose.yml` — MariaDB 11 (포트 3306, 볼륨 영속화, healthcheck)
+- [~] Prisma 초기화 (스키마 파일 작성 완료) / **MariaDB 연결 확인은 미완** — Node.js·Docker 설치 후 검증
+- [x] ESLint + Prettier + tsconfig 공통 설정
+- [x] **ESLint `import/no-restricted-paths` 규칙 추가** — 2.3 의존성 그래프 역방향 import 차단
+- [x] Vitest 설정 (단위 테스트가 DB 없이 도는지 확인)
+- [x] `.env.example` (`DATABASE_URL`, `MOLIT_API_KEY`, `KAKAO_REST_KEY`, `KAKAO_JS_KEY`, `ADMIN_SESSION_SECRET`, `DEMO_MODE`)
+- [x] `scripts/setup.sh` (아래 전문)
+- [x] `scripts/start.command` — macOS 더블클릭 실행용 래퍼 (비기술자용)
+- [x] `pnpm dev` 루트 스크립트 (turbo로 web+api 동시 기동)
+- [x] README에 `git clone → ./scripts/setup.sh → pnpm dev` 3줄 온보딩
 
 ```bash
 #!/usr/bin/env bash
@@ -1100,7 +1104,7 @@ echo "  관리자 대시보드: http://localhost:3000/admin  (admin / 12345 → 
 echo "  DB 콘솔:        pnpm prisma studio"
 ```
 
-- [ ] `scripts/seed-admin.ts` — 기본 관리자 계정 (멱등)
+- [x] `scripts/seed-admin.ts` — 기본 관리자 계정 (멱등)
 
 ```ts
 // scripts/seed-admin.ts

@@ -1,0 +1,573 @@
+/* ============================================================
+   globals.css — Design.md 토큰 시스템 구현
+   ------------------------------------------------------------
+   원칙 (Design.md 부록 체크리스트):
+   1. 배경은 #000 이 아닌 #08090A, 텍스트는 #FFF 가 아닌 #F7F8F8
+   2. 경계선은 회색이 아니라 흰색 5~8% 알파 + 0.5px 헤어라인
+   3. 표면 위계는 그림자보다 배경 레벨(level-0~3) 상승으로
+   4. 제목은 자간 -0.012~-0.022em, 대형 제목 행간 1.0~1.1
+   5. 버튼은 32px 높이의 필(9999px) + 13px/weight 510
+   6. 색은 전부 시맨틱 CSS 변수로 — 테마는 토큰 재바인딩으로 해결
+   7. 섹션 제목(H2)조차 tertiary 회색, 강조 문장만 primary 흰색
+
+   색상을 컴포넌트에 직접 쓰지 말 것. 반드시 var(--color-*) 경유.
+   ============================================================ */
+
+/* ── 1. 원시 팔레트 ──────────────────────────────────────── */
+:root {
+  /* 브랜드 */
+  --color-indigo: #5e6ad2;
+  --color-accent-raw: #7170ff;
+  --color-accent-hover-raw: #828fff;
+  --color-accent-tint-raw: #18182f;
+
+  /* 기능색 */
+  --color-red: #eb5757;
+  --color-green: #27a644;
+  --color-orange: #fc7840;
+  --color-yellow: #f0bf00;
+  --color-teal: #00b8cc;
+
+  /* 라이트 테마용 12단계 그레이 램프 (Radix Colors 방식) */
+  --gray1: hsl(0, 0%, 99%);
+  --gray2: hsl(0, 0%, 97.3%);
+  --gray3: hsl(0, 0%, 95.1%);
+  --gray4: hsl(0, 0%, 93%);
+  --gray5: hsl(0, 0%, 90.9%);
+  --gray6: hsl(0, 0%, 88.7%);
+  --gray7: hsl(0, 0%, 85.8%);
+  --gray8: hsl(0, 0%, 78%);
+  --gray9: hsl(0, 0%, 56.1%);
+  --gray10: hsl(0, 0%, 52.3%);
+  --gray11: hsl(0, 0%, 43.5%);
+  --gray12: hsl(0, 0%, 9%);
+}
+
+/* ── 2. 시맨틱 토큰 — 다크 (기본) ────────────────────────── */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* 액센트 */
+  --color-brand-bg: var(--color-indigo);
+  --color-accent: var(--color-accent-raw);
+  --color-accent-hover: var(--color-accent-hover-raw);
+  --color-accent-tint: var(--color-accent-tint-raw);
+  --color-link-primary: var(--color-accent-hover-raw);
+
+  /* 배경 — 표고(elevation) 레벨. 위로 뜰수록 밝아진다 */
+  --color-bg-marketing: #010102;
+  --color-bg-primary: #08090a;
+  --color-bg-level-1: #0f1011;
+  --color-bg-level-2: #141516;
+  --color-bg-level-3: #191a1b;
+  --color-bg-secondary: #1c1c1f;
+  --color-bg-tertiary: #232326;
+  --color-bg-quaternary: #28282c;
+  --color-bg-translucent: rgba(255, 255, 255, 0.05);
+  --color-bg-floating: #161718;
+
+  /* 텍스트 — 4단계 위계 */
+  --color-text-primary: #f7f8f8;
+  --color-text-secondary: #d0d6e0;
+  --color-text-tertiary: #8a8f98;
+  --color-text-quaternary: #62666d;
+
+  /* 경계 — 다크에서는 회색이 아니라 흰색 알파 */
+  --color-border-primary: #23252a;
+  --color-border-secondary: #34343a;
+  --color-border-translucent: rgba(255, 255, 255, 0.05);
+  --color-border-translucent-strong: rgba(255, 255, 255, 0.08);
+
+  /* 버튼 — Primary 는 다크 위의 밝은 반전색 */
+  --color-button-invert-bg: #e5e5e6;
+  --color-button-invert-bg-hover: #ffffff;
+  --color-button-invert-fg: #08090a;
+
+  /* 헤더 유리 배경 */
+  --color-header-bg: rgba(11, 11, 11, 0.8);
+
+  /* 상태 — 같은 hue 에서 배경 명도 6~10%, 텍스트 65~81% */
+  --color-status-error-bg: hsl(358, 76%, 10%);
+  --color-status-error-border: hsl(357, 89%, 16%);
+  --color-status-error-text: hsl(358, 100%, 81%);
+  --color-status-success-bg: hsl(150, 100%, 6%);
+  --color-status-success-border: hsl(147, 100%, 12%);
+  --color-status-success-text: hsl(150, 86%, 65%);
+  --color-status-warning-bg: hsl(64, 100%, 6%);
+  --color-status-warning-border: hsl(60, 100%, 9%);
+  --color-status-warning-text: hsl(46, 87%, 65%);
+  --color-status-info-bg: hsl(215, 100%, 6%);
+  --color-status-info-border: hsl(223, 43%, 17%);
+  --color-status-info-text: hsl(216, 87%, 65%);
+
+  --shadow-low: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-medium: 0 4px 24px rgba(0, 0, 0, 0.2);
+  --shadow-high: 0 7px 32px rgba(0, 0, 0, 0.35);
+  --shadow-card-ring: rgba(0, 0, 0, 0.2) 0 0 0 1px;
+}
+
+/* ── 3. 시맨틱 토큰 — 라이트 (토큰 재바인딩) ───────────────
+   Design.md 6절: 브랜드색은 테마 불변, 나머지는 그레이 램프로 대응.
+   서비스 화면은 다크가 기본이고, 라이트는 data-theme="light" 로 전환. */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --color-bg-marketing: var(--gray1);
+  --color-bg-primary: var(--gray1);
+  --color-bg-level-1: #ffffff;
+  --color-bg-level-2: var(--gray2);
+  --color-bg-level-3: var(--gray3);
+  --color-bg-secondary: var(--gray2);
+  --color-bg-tertiary: var(--gray3);
+  --color-bg-quaternary: var(--gray4);
+  --color-bg-translucent: rgba(0, 0, 0, 0.03);
+  --color-bg-floating: #ffffff;
+
+  --color-text-primary: var(--gray12);
+  --color-text-secondary: var(--gray11);
+  --color-text-tertiary: var(--gray10);
+  --color-text-quaternary: var(--gray9);
+
+  --color-border-primary: var(--gray5);
+  --color-border-secondary: var(--gray6);
+  --color-border-translucent: rgba(0, 0, 0, 0.07);
+  --color-border-translucent-strong: rgba(0, 0, 0, 0.1);
+
+  --color-button-invert-bg: var(--gray12);
+  --color-button-invert-bg-hover: #000000;
+  --color-button-invert-fg: var(--gray1);
+
+  --color-header-bg: rgba(252, 252, 252, 0.8);
+
+  --shadow-card-ring: rgba(0, 0, 0, 0.06) 0 0 0 1px;
+}
+
+/* ── 4. 타이포그래피 · 간격 · 반경 · 모션 토큰 ───────────── */
+:root {
+  --font-sans:
+    'Pretendard Variable', Pretendard, 'Inter', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Berkeley Mono', Menlo, monospace;
+
+  /* Variable 폰트 커스텀 웨이트 */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 510;
+  --font-weight-semibold: 590;
+  --font-weight-bold: 680;
+
+  /* Title 스케일 */
+  --title-1: 17px;
+  --title-2: 20px;
+  --title-3: 24px;
+  --title-4: 32px;
+  --title-5: 40px;
+  --title-6: 48px;
+  --title-7: 56px;
+  --title-8: 64px;
+  --title-9: 72px;
+
+  /* Text 스케일 */
+  --text-tiny: 10px;
+  --text-micro: 12px;
+  --text-mini: 13px;
+  --text-small: 14px;
+  --text-regular: 15px;
+  --text-large: 17px;
+
+  /* 자간 */
+  --tracking-title-sm: -0.012em;
+  --tracking-title-lg: -0.022em;
+
+  /* 간격 — 4px 배수 그리드 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  --block-spacing-small: 8px;
+  --block-spacing: 16px;
+  --page-padding-inline: 24px;
+  --page-padding-block: 64px;
+  --page-inset: 32px;
+  --header-height: 72px;
+
+  /* 폭 시스템 */
+  --page-max-width: 1024px;
+  --homepage-max-width: 1344px;
+  --prose-max-width: 624px;
+
+  /* 반경 */
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-12: 12px;
+  --radius-16: 16px;
+  --radius-24: 24px;
+  --radius-32: 32px;
+  --radius-rounded: 9999px;
+  --radius-circle: 50%;
+
+  /* 모션 */
+  --speed-quick: 0.1s;
+  --speed-highlight: 0.15s;
+  --speed-regular: 0.25s;
+
+  /* 포커스 링 */
+  --focus-ring-color: #5e69d1;
+  --focus-ring-offset: 2px;
+}
+
+/* ── 5. 리셋 · 기본 요소 ─────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-regular);
+  line-height: 1.6;
+  font-feature-settings: 'cv01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-title-lg);
+  color: var(--color-text-primary);
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-link-primary);
+  text-decoration: none;
+  transition: color var(--speed-quick) ease;
+}
+a:hover {
+  color: var(--color-text-primary);
+}
+
+img,
+svg {
+  max-width: 100%;
+  display: block;
+}
+
+:focus-visible {
+  outline: 1px solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-4);
+}
+
+/* ── 6. 재사용 컴포넌트 클래스 ───────────────────────────── */
+
+/* 페이지 컨테이너 */
+.container {
+  width: 100%;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding-inline: var(--page-padding-inline);
+}
+.container--wide {
+  max-width: var(--homepage-max-width);
+}
+.prose {
+  max-width: var(--prose-max-width);
+}
+
+/* 헤더 — fixed 72px, 유리 배경 */
+.site-header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--header-height);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  background: var(--color-header-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--color-border-translucent-strong);
+}
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  width: 100%;
+}
+.site-header__logo {
+  font-size: var(--text-large);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-title-sm);
+  color: var(--color-text-primary);
+  margin-right: auto;
+}
+.site-header__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* 본문 — 고정 헤더만큼 밀어준다 */
+.site-main {
+  padding-top: var(--header-height);
+}
+
+/* 섹션 */
+.section {
+  padding-block: var(--page-padding-block);
+}
+
+/* 버튼 — 32px 필 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-rounded);
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: var(--text-mini);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--speed-quick) ease,
+    color var(--speed-quick) ease,
+    border-color var(--speed-quick) ease;
+}
+.btn--primary {
+  background: var(--color-button-invert-bg);
+  border-color: var(--color-button-invert-bg);
+  color: var(--color-button-invert-fg);
+}
+.btn--primary:hover {
+  background: var(--color-button-invert-bg-hover);
+  border-color: var(--color-button-invert-bg-hover);
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--color-text-tertiary);
+}
+.btn--ghost:hover {
+  color: var(--color-text-primary);
+}
+.btn--brand {
+  background: var(--color-brand-bg);
+  color: #ffffff;
+  border-color: var(--color-brand-bg);
+}
+.btn--brand:hover {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.btn--lg {
+  height: 40px;
+  padding: 0 18px;
+  font-size: var(--text-small);
+}
+
+/* 카드 — 배경 레벨 상승 + 0.5px 헤어라인 + 링 */
+.card {
+  background: var(--color-bg-level-1);
+  border: 0.5px solid var(--color-border-translucent-strong);
+  border-radius: var(--radius-12);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card-ring);
+}
+.card__title {
+  font-size: var(--text-mini);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
+  letter-spacing: 0;
+  margin-bottom: var(--space-2);
+}
+.card__value {
+  font-size: var(--title-3);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-title-sm);
+  color: var(--color-text-primary);
+}
+.card__meta {
+  margin-top: var(--space-1);
+  font-size: var(--text-micro);
+  color: var(--color-text-quaternary);
+}
+
+/* 떠 있는 패널(모달·팝오버) */
+.panel-floating {
+  background: var(--color-bg-floating);
+  border: 0.5px solid var(--color-border-translucent-strong);
+  border-radius: var(--radius-12);
+  box-shadow: 0 2px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* 입력폼 */
+.input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--color-bg-translucent);
+  border: 1px solid var(--color-border-translucent-strong);
+  border-radius: var(--radius-8);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-small);
+  transition: border-color var(--speed-quick) ease;
+}
+.input::placeholder {
+  color: var(--color-text-quaternary);
+}
+.input:focus {
+  outline: 1px solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-color: transparent;
+}
+
+/* 상태 배지 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-rounded);
+  border: 1px solid;
+  font-size: var(--text-micro);
+  font-weight: var(--font-weight-medium);
+}
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-circle);
+  background: currentColor;
+}
+.badge--success {
+  background: var(--color-status-success-bg);
+  border-color: var(--color-status-success-border);
+  color: var(--color-status-success-text);
+}
+.badge--error {
+  background: var(--color-status-error-bg);
+  border-color: var(--color-status-error-border);
+  color: var(--color-status-error-text);
+}
+.badge--warning {
+  background: var(--color-status-warning-bg);
+  border-color: var(--color-status-warning-border);
+  color: var(--color-status-warning-text);
+}
+.badge--info {
+  background: var(--color-status-info-bg);
+  border-color: var(--color-status-info-border);
+  color: var(--color-status-info-text);
+}
+.badge--neutral {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-translucent-strong);
+  color: var(--color-text-tertiary);
+}
+
+/* 타이포 유틸 — H2 는 tertiary 회색, 강조만 primary 흰색 (Linear 핵심 패턴) */
+.eyebrow {
+  font-size: var(--text-mini);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-quaternary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.title-hero {
+  font-size: clamp(40px, 6vw, var(--title-8));
+  line-height: 1.06;
+  letter-spacing: var(--tracking-title-lg);
+  font-weight: var(--font-weight-medium);
+}
+.title-section {
+  font-size: clamp(28px, 4vw, var(--title-5));
+  line-height: 1.1;
+  letter-spacing: var(--tracking-title-lg);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
+}
+.title-section strong {
+  color: var(--color-text-primary);
+  font-weight: inherit;
+}
+.text-muted {
+  color: var(--color-text-tertiary);
+}
+.text-faint {
+  color: var(--color-text-quaternary);
+}
+.text-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-mini);
+}
+
+/* 레이아웃 유틸 */
+.stack {
+  display: flex;
+  flex-direction: column;
+}
+.stack--2 { gap: var(--space-2); }
+.stack--4 { gap: var(--space-4); }
+.stack--6 { gap: var(--space-6); }
+.stack--8 { gap: var(--space-8); }
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+/* 헤어라인 구분선 */
+.hairline {
+  height: 1px;
+  background: var(--color-border-translucent-strong);
+  border: 0;
+}
+
+/* ── 7. 반응형 — 간격을 한 단계씩 줄인다 ──────────────────── */
+@media (max-width: 768px) {
+  :root {
+    --page-padding-block: 40px;
+    --page-padding-inline: 16px;
+    --page-inset: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

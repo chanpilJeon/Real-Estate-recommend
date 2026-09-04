@@ -1,0 +1,20 @@
+// Prisma 스키마 — Step 0 에서는 연결 설정만 잡아둔다.
+// 실제 모델(regions / complexes / trades …) 전체 정의는 Step 2 에서 작성한다.
+// (ToDo.md 4.2절)
+
+datasource db {
+  provider = "mysql" // MariaDB 는 mysql 프로바이더를 사용한다
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+/// 연결 확인용 최소 모델. Step 2 에서 실제 스키마로 대체된다.
+model HealthCheck {
+  id        Int      @id @default(autoincrement())
+  checkedAt DateTime @default(now()) @map("checked_at")
+
+  @@map("health_check")
+}
