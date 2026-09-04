@@ -35,3 +35,7 @@ coverage/
 
 # Next.js 자동 생성 타입 파일
 next-env.d.ts
+
+# 수동으로 내려받는 원본 데이터 (용량이 크고 출처가 정부 사이트)
+data/*
+!data/README.md

@@ -1,22 +1,316 @@
-// Prisma 스키마 — Step 0~1 에서는 연결 설정만 잡아둔다.
-// 실제 모델(regions / complexes / trades …) 전체 정의는 Step 2 에서 작성한다.
-// (ToDo.md 4.2절)
+// ============================================================
+// Prisma 스키마 — ToDo.md 4.2절
+// DB: MariaDB 11 (Prisma 에서는 mysql 프로바이더를 사용)
+//
+// 설계 결정은 ToDo.md 4.3절 참조. 핵심만 옮기면:
+//  · 금액은 만원 단위 Int   — 실거래가가 만원 단위로 공시됨, 부동소수점 오차 회피
+//  · trades.sourceHash UNIQUE — 재수집 시 중복 적재를 DB 레벨에서 차단
+//  · trades.complexId nullable — 단지 매칭에 실패해도 원본 거래는 버리지 않는다
+//  · 좌표는 Decimal (POINT 미사용) — 거리는 배치에서 사전계산해 컬럼에 캐시
+// ============================================================
 
 datasource db {
-  provider = "mysql" // MariaDB 는 mysql 프로바이더를 사용한다
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextIndex"] // regions 지역명 검색용
 }
 
-/// Step 2 에서 실제 스키마로 대체되는 임시 모델.
-/// Prisma 는 모델이 하나도 없으면 클라이언트를 만들지 못하기 때문에 자리만 잡아둔다.
-/// ※ 모델 이름은 코드의 메서드명과 겹치지 않게 짓는다 —
-///   과거 `HealthCheck` 로 뒀다가 PrismaService.healthCheck() 와 충돌했다.
-model PlaceholderUntilStep2 {
-  id Int @id @default(autoincrement())
+// ─────────────── 지역 ───────────────
 
-  @@map("_placeholder_until_step2")
+model Region {
+  code        String  @id @db.Char(10) // 법정동코드 10자리
+  sigunguCode String  @map("sigungu_code") @db.Char(5) // 앞 5자리 = 국토부 API 조회키
+  sido        String  @db.VarChar(20)
+  sigungu     String  @db.VarChar(30)
+  dong        String? @db.VarChar(30)
+  isActive    Boolean @default(true) @map("is_active") // 폐지된 법정동 제외용
+
+  complexes Complex[]
+  aliases   RegionAlias[]
+
+  @@index([sigunguCode])
+  @@index([sido, sigungu])
+  @@fulltext([sido, sigungu, dong])
+  @@map("regions")
+}
+
+/// 생활권 별칭 사전: "미사" → 하남시 망월동·풍산동·선동 (ToDo.md 3.3)
+model RegionAlias {
+  id         Int    @id @default(autoincrement())
+  alias      String @db.VarChar(30)
+  regionCode String @map("region_code") @db.Char(10)
+
+  region Region @relation(fields: [regionCode], references: [code], onDelete: Cascade)
+
+  @@unique([alias, regionCode])
+  @@index([alias])
+  @@map("region_aliases")
+}
+
+// ─────────────── 단지 ───────────────
+
+model Complex {
+  id             Int       @id @default(autoincrement())
+  kaptCode       String?   @unique @map("kapt_code") @db.VarChar(20) // 공동주택 코드
+  name           String    @db.VarChar(100)
+  nameNormalized String    @map("name_normalized") @db.VarChar(100) // 매칭용 정규화명
+  regionCode     String    @map("region_code") @db.Char(10)
+  address        String    @db.VarChar(200)
+  lat            Decimal?  @db.Decimal(10, 7)
+  lng            Decimal?  @db.Decimal(10, 7)
+  households     Int       @default(0)
+  buildingCount  Int       @default(0) @map("building_count")
+  approvalDate   DateTime? @map("approval_date") @db.Date // 사용승인일
+  builtYear      Int?      @map("built_year")
+  parkingCount   Int       @default(0) @map("parking_count")
+  heatingType    String?   @map("heating_type") @db.VarChar(30)
+  nearestSubwayM Int?      @map("nearest_subway_m") // 배치 사전계산 캐시
+  nearestSchoolM Int?      @map("nearest_school_m")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  region    Region     @relation(fields: [regionCode], references: [code])
+  areaTypes AreaType[]
+  trades    Trade[]
+  rents     Rent[]
+
+  @@unique([regionCode, nameNormalized, builtYear], name: "uk_complex_identity")
+  @@index([regionCode])
+  @@index([builtYear])
+  @@index([households])
+  @@map("complexes")
+}
+
+model AreaType {
+  id           Int      @id @default(autoincrement())
+  complexId    Int      @map("complex_id")
+  exclusiveSqm Decimal  @map("exclusive_sqm") @db.Decimal(7, 2) // 전용면적
+  supplySqm    Decimal? @map("supply_sqm") @db.Decimal(7, 2)
+  rooms        Int?
+  bathrooms    Int?
+  householdCnt Int?     @map("household_cnt")
+
+  complex Complex @relation(fields: [complexId], references: [id], onDelete: Cascade)
+
+  @@unique([complexId, exclusiveSqm])
+  @@map("area_types")
+}
+
+// ─────────────── 거래 ───────────────
+
+model Trade {
+  id           BigInt   @id @default(autoincrement())
+  complexId    Int?     @map("complex_id") // 매칭 실패 시 null
+  regionCode   String   @map("region_code") @db.Char(10)
+  rawName      String   @map("raw_name") @db.VarChar(100) // API 원본 단지명 (재매칭용)
+  exclusiveSqm Decimal  @map("exclusive_sqm") @db.Decimal(7, 2)
+  priceManwon  Int      @map("price_manwon") // 거래금액 (만원)
+  contractedAt DateTime @map("contracted_at") @db.Date
+  floor        Int
+  builtYear    Int?     @map("built_year")
+  isCanceled   Boolean  @default(false) @map("is_canceled") // 해제 여부
+  sourceHash   String   @unique @map("source_hash") @db.Char(64) // 중복 적재 방지
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  complex Complex? @relation(fields: [complexId], references: [id], onDelete: SetNull)
+
+  @@index([complexId, exclusiveSqm, contractedAt]) // 중위가·추이 조회 핵심 인덱스
+  @@index([regionCode, contractedAt])
+  @@index([contractedAt]) // 데이터 신선도 지표
+  @@map("trades")
+}
+
+model Rent {
+  id            BigInt   @id @default(autoincrement())
+  complexId     Int?     @map("complex_id")
+  regionCode    String   @map("region_code") @db.Char(10)
+  rawName       String   @map("raw_name") @db.VarChar(100)
+  exclusiveSqm  Decimal  @map("exclusive_sqm") @db.Decimal(7, 2)
+  depositManwon Int      @map("deposit_manwon")
+  monthlyManwon Int      @default(0) @map("monthly_manwon") // 0이면 전세
+  contractedAt  DateTime @map("contracted_at") @db.Date
+  floor         Int
+  sourceHash    String   @unique @map("source_hash") @db.Char(64)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  complex Complex? @relation(fields: [complexId], references: [id], onDelete: SetNull)
+
+  @@index([complexId, exclusiveSqm, contractedAt])
+  @@index([regionCode, contractedAt])
+  @@map("rents")
+}
+
+// ─────────────── 입지 ───────────────
+
+model Poi {
+  id       Int     @id @default(autoincrement())
+  category String  @db.VarChar(20) // 'subway' | 'elementary_school'
+  name     String  @db.VarChar(100)
+  lat      Decimal @db.Decimal(10, 7)
+  lng      Decimal @db.Decimal(10, 7)
+  extra    Json? // 노선명 등
+
+  @@index([category])
+  @@map("pois")
+}
+
+// ─────────────── 매칭 ───────────────
+
+model MatchFailure {
+  id          Int       @id @default(autoincrement())
+  regionCode  String    @map("region_code") @db.Char(10)
+  rawName     String    @map("raw_name") @db.VarChar(100)
+  builtYear   Int?      @map("built_year")
+  occurrences Int       @default(1) // 같은 실패 반복 횟수
+  candidates  Json? // 후보 단지 목록
+  resolvedId  Int?      @map("resolved_complex_id")
+  resolvedAt  DateTime? @map("resolved_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@unique([regionCode, rawName, builtYear])
+  @@index([resolvedAt]) // 미처리 건 조회
+  @@map("match_failures")
+}
+
+/// 관리자 수동 보정 사전 — 매칭 규칙이 못 잡는 케이스를 학습시킨다
+model MatchOverride {
+  id         Int    @id @default(autoincrement())
+  regionCode String @map("region_code") @db.Char(10)
+  rawName    String @map("raw_name") @db.VarChar(100)
+  complexId  Int    @map("complex_id")
+
+  @@unique([regionCode, rawName])
+  @@map("match_overrides")
+}
+
+// ─────────────── 사용자 (Phase 4) ───────────────
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  profiles  UserProfile[]
+  favorites FavoriteComplex[]
+
+  @@map("users")
+}
+
+model UserProfile {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  name           String   @db.VarChar(50) // "우리집 조건"
+  priceMinManwon Int?     @map("price_min_manwon")
+  priceMaxManwon Int?     @map("price_max_manwon")
+  areaMinSqm     Decimal? @map("area_min_sqm") @db.Decimal(7, 2)
+  areaMaxSqm     Decimal? @map("area_max_sqm") @db.Decimal(7, 2)
+  minBuiltYear   Int?     @map("min_built_year")
+  minHouseholds  Int?     @map("min_households")
+  preset         String   @default("value") @db.VarChar(20)
+  regionCodes    Json     @map("region_codes")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_profiles")
+}
+
+model FavoriteComplex {
+  userId    Int      @map("user_id")
+  complexId Int      @map("complex_id")
+  memo      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, complexId])
+  @@map("favorite_complexes")
+}
+
+// ─────────────── 운영 ───────────────
+
+model AdminUser {
+  id                 Int       @id @default(autoincrement())
+  username           String    @unique @db.VarChar(50)
+  passwordHash       String    @map("password_hash") @db.VarChar(60) // bcrypt
+  mustChangePassword Boolean   @default(true) @map("must_change_password")
+  failedAttempts     Int       @default(0) @map("failed_attempts")
+  lockedUntil        DateTime? @map("locked_until")
+  lastLoginAt        DateTime? @map("last_login_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  sessions AdminSession[]
+
+  @@map("admin_users")
+}
+
+model AdminSession {
+  tokenHash String   @id @map("token_hash") @db.Char(64)
+  adminId   Int      @map("admin_id")
+  expiresAt DateTime @map("expires_at")
+  ip        String?  @db.VarChar(45)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([expiresAt])
+  @@map("admin_sessions")
+}
+
+model JobRun {
+  id           Int       @id @default(autoincrement())
+  jobName      String    @map("job_name") @db.VarChar(50)
+  status       String    @db.VarChar(20) // running | success | failed
+  startedAt    DateTime  @map("started_at")
+  finishedAt   DateTime? @map("finished_at")
+  rowsInserted Int       @default(0) @map("rows_inserted")
+  rowsUpdated  Int       @default(0) @map("rows_updated")
+  errorMessage String?   @map("error_message") @db.Text
+  triggeredBy  String    @default("cron") @map("triggered_by") @db.VarChar(20)
+  params       Json?
+
+  @@index([jobName, startedAt])
+  @@index([status])
+  @@map("job_runs")
+}
+
+model AppLog {
+  id         BigInt   @id @default(autoincrement())
+  level      String   @db.VarChar(10) // error | warn | info
+  context    String   @db.VarChar(50) // 'collector', 'matcher' …
+  message    String   @db.Text
+  messageKey String   @map("message_key") @db.Char(32) // 그룹핑용 해시
+  meta       Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([level, createdAt])
+  @@index([messageKey, createdAt])
+  @@map("app_logs")
+}
+
+model ApiQuotaUsage {
+  provider   String   @db.VarChar(20)
+  date       DateTime @db.Date
+  used       Int      @default(0)
+  dailyLimit Int      @map("daily_limit")
+
+  @@id([provider, date])
+  @@map("api_quota_usage")
+}
+
+model SearchEvent {
+  id          BigInt   @id @default(autoincrement())
+  regionCode  String   @map("region_code") @db.Char(10)
+  conditions  Json
+  resultCount Int      @map("result_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([regionCode, createdAt])
+  @@index([createdAt])
+  @@map("search_events")
 }
