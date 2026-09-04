@@ -7,6 +7,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# pnpm 을 사용자 폴더에 설치하는 경우를 대비해 PATH 를 미리 잡아둔다.
+USER_BIN="$HOME/.local/bin"
+mkdir -p "$USER_BIN"
+case ":$PATH:" in *":$USER_BIN:"*) ;; *) export PATH="$USER_BIN:$PATH" ;; esac
+
 RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; BOLD=$'\033[1m'; OFF=$'\033[0m'
 fail() { echo "${RED}${BOLD}✗ $1${OFF}"; shift; for l in "$@"; do echo "  $l"; done; exit 1; }
 ok()   { echo "${GREEN}✓${OFF} $1"; }
@@ -29,10 +34,16 @@ ok "Node.js $(node -v)"
 
 if ! command -v pnpm >/dev/null; then
   echo "  pnpm 을 설치합니다..."
-  corepack enable >/dev/null 2>&1 || true
-  corepack prepare pnpm@9.7.0 --activate >/dev/null 2>&1 \
-    || npm install -g pnpm@9.7.0 >/dev/null 2>&1 \
-    || fail "pnpm 설치에 실패했습니다." "터미널에 이렇게 입력해 보세요:  npm install -g pnpm"
+  export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+  # /usr/local/bin 은 관리자(root) 소유라 sudo 없이 쓸 수 없는 경우가 많다.
+  # 그래서 먼저 시도해보고, 막히면 사용자 폴더(~/.local/bin)에 설치한다.
+  corepack enable >/dev/null 2>&1 \
+    || corepack enable --install-directory "$USER_BIN" >/dev/null 2>&1 \
+    || fail "pnpm 설치에 실패했습니다." \
+         "터미널에 아래 한 줄을 붙여넣고 실행한 뒤, 이 스크립트를 다시 실행해 주세요:" \
+         "  corepack enable --install-directory ~/.local/bin"
+  command -v pnpm >/dev/null || fail "pnpm 을 찾을 수 없습니다." \
+    "터미널을 완전히 닫았다가 다시 열고 시도해 주세요."
 fi
 ok "pnpm $(pnpm -v)"
 

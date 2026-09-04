@@ -244,6 +244,9 @@ body {
   font-feature-settings: 'cv01', 'ss03';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* 한국어: 어절 중간에서 줄이 끊기지 않게 한다 ("찾 / 습니다" 방지) */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 h1,
@@ -297,6 +300,10 @@ svg {
 }
 .prose {
   max-width: var(--prose-max-width);
+}
+/* 대형 제목용 폭 — 산문(624px)보다 넓게 쓴다 (Design.md 1절 이원 구조) */
+.measure-title {
+  max-width: 800px;
 }
 
 /* 헤더 — fixed 72px, 유리 배경 */

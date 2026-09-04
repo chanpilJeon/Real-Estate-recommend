@@ -31,3 +31,6 @@ coverage/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Next.js 자동 생성 타입 파일
+next-env.d.ts

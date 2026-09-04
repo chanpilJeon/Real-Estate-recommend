@@ -1,6 +1,5 @@
-import type { Metadata } from 'next';
-
 import { APP_NAME } from '@apt/shared';
+import type { Metadata } from 'next';
 
 import './globals.css';
 

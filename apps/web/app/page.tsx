@@ -15,14 +15,14 @@ export default function HomePage() {
   return (
     <div className="container container--wide">
       <section className="section stack stack--8">
-        <div className="stack stack--4 prose">
+        <div className="stack stack--4 measure-title">
           <span className="eyebrow">Step 0 · 개발환경 준비 완료</span>
           <h1 className="title-hero">
             지역명 하나로
             <br />
             조건에 맞는 아파트를 찾습니다
           </h1>
-          <p className="text-muted" style={{ fontSize: 'var(--text-large)' }}>
+          <p className="text-muted prose" style={{ fontSize: 'var(--text-large)' }}>
             예산·평형·연식·세대수 조건을 한 번 설정해두면, 실거래가를 기준으로 단지를 랭킹해
             추천합니다. 지금은 개발 초기 단계로, 아래는 프로그램이 정상 실행됐는지 확인하는
             화면입니다.

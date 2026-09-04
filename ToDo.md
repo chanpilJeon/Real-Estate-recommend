@@ -1048,9 +1048,13 @@ model SearchEvent {
 
 ### Step 0 — 리포지토리·개발환경 (의존 없음, 1~2일)
 
-> **진행 메모 (2026-09-04)**: 브랜치 `feat/step0-monorepo-setup` 에서 파일 작성 완료.
-> 로컬에 Node.js·Docker 가 아직 설치되지 않아 **실제 실행 검증(M1)은 대기 중**이다.
-> `[x]` = 파일 작성 완료, `[~]` = 작성했으나 실행 검증 전.
+> **진행 메모 (2026-09-04)**: 브랜치 `feat/step0-monorepo-setup`.
+> Node.js v24.20.0 설치 후 **실행 검증 완료** — `pnpm install` / `lint` / `typecheck` / `test` / `build` 전부 통과,
+> web(3000)·api(4000) 기동 및 화면 확인 완료. 계층 위반 ESLint 규칙도 위반 코드로 실제 차단 확인.
+> Docker 미설치로 **MariaDB 연결만 미검증** (Step 2 에서 필요).
+>
+> 로컬 환경 메모: `/usr/local/bin` 이 root 소유라 `corepack enable` 이 권한 오류를 낸다.
+> `setup.sh` 가 자동으로 `~/.local/bin` 에 pnpm 을 설치하고 PATH 를 잡도록 처리했다.
 
 - [x] pnpm workspace 모노레포 초기화 (`apps/web`, `apps/api`, `packages/shared`)
 - [x] `docker-compose.yml` — MariaDB 11 (포트 3306, 볼륨 영속화, healthcheck)
