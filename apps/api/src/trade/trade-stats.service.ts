@@ -6,7 +6,7 @@ import {
   type MedianResult,
   type MonthlyPoint,
 } from './domain/price-stats';
-import type { ITradeRepository } from './trade.repository';
+import type { AreaRangeFilter, ITradeRepository } from './trade.repository';
 import { TtlCache } from './ttl-cache';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -71,6 +71,42 @@ export class TradeStatsService {
       const result = medianExcludingOutliers(trades.map((t) => t.price.toManwon()));
       return result === null ? null : Money.fromManwon(result.median);
     });
+  }
+
+  /**
+   * 여러 단지의 중위가를 한 번에 구한다 (검색 결과 목록용).
+   *
+   * 단지마다 `medianPrice()` 를 부르면 질의가 단지 수만큼 늘어난다.
+   * 거래를 한 번에 읽어 와 메모리에서 단지별로 나눈 뒤 계산한다.
+   * **가격 집계 규칙은 여기서도 같은 순수 함수를 쓴다** (ToDo.md 3.8).
+   */
+  async medianPricesByComplex(
+    complexIds: number[],
+    areaRange?: AreaRangeFilter,
+    months = DEFAULT_MEDIAN_MONTHS,
+  ): Promise<Map<number, Money>> {
+    if (complexIds.length === 0) return new Map();
+
+    const trades = await this.repository.findTradesForComplexes(
+      complexIds,
+      this.monthsAgo(months),
+      areaRange,
+    );
+
+    const grouped = new Map<number, number[]>();
+    for (const trade of trades) {
+      if (trade.complexId === null) continue;
+      const bucket = grouped.get(trade.complexId);
+      if (bucket === undefined) grouped.set(trade.complexId, [trade.price.toManwon()]);
+      else bucket.push(trade.price.toManwon());
+    }
+
+    const medians = new Map<number, Money>();
+    for (const [complexId, prices] of grouped) {
+      const result = medianExcludingOutliers(prices);
+      if (result !== null) medians.set(complexId, Money.fromManwon(result.median));
+    }
+    return medians;
   }
 
   /** 월별 중위가 추이 (이상치 제외) */

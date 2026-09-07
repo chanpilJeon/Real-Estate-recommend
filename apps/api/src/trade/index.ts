@@ -10,6 +10,7 @@ export { Trade, Rent, type TradeProps, type RentProps } from './domain/trade';
 export type { MonthlyPoint } from './domain/price-stats';
 export {
   TRADE_REPOSITORY,
+  type AreaRangeFilter,
   type BulkResult,
   type ITradeRepository,
   type RentUpsertInput,

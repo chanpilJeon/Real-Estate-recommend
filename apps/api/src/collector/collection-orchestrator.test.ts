@@ -87,6 +87,7 @@ function buildDeps(overrides: Partial<CollectorDeps> = {}): {
       countTrades: () => Promise.resolve(0),
       distinctAreas: () => Promise.resolve([]),
       relinkByRawName: () => Promise.resolve(0),
+      findTradesForComplexes: () => Promise.resolve([]),
     },
     tradeStats: {
       invalidateCache: () => {

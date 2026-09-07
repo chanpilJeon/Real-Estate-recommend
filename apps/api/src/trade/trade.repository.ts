@@ -32,6 +32,12 @@ export interface BulkResult {
   skipped: number;
 }
 
+/** 전용면적 구간 (양끝 포함). 검색 조건의 면적 필터를 그대로 옮긴 것 */
+export interface AreaRangeFilter {
+  minSqm?: number;
+  maxSqm?: number;
+}
+
 export interface TradeQuery {
   complexId: number;
   area?: Area;
@@ -53,6 +59,15 @@ export interface ITradeRepository {
   bulkUpsertRents(rents: RentUpsertInput[]): Promise<BulkResult>;
 
   findTrades(query: TradeQuery): Promise<Trade[]>;
+  /**
+   * 여러 단지의 거래를 한 번에 가져온다.
+   * 검색 결과 수백 개 단지의 중위가를 각각 조회하면 질의가 그만큼 늘어난다.
+   */
+  findTradesForComplexes(
+    complexIds: number[],
+    since: Date,
+    areaRange?: AreaRangeFilter,
+  ): Promise<Trade[]>;
   findRents(query: TradeQuery): Promise<Rent[]>;
 
   /** 데이터 신선도 지표 — 가장 최근 계약일 */

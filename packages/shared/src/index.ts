@@ -9,6 +9,7 @@
 
 export { InvalidValueError } from './errors';
 
+export { Range } from './value-objects/range';
 export { Money } from './value-objects/money';
 export { Area } from './value-objects/area';
 export { RegionCode } from './value-objects/region-code';

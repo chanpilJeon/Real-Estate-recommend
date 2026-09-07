@@ -1,38 +1,16 @@
-import { Coordinate, RegionCode } from '@apt/shared';
+import type { RegionCode } from '@apt/shared';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../core';
 
 import type { ComplexUpsertInput, IComplexRepository, UpsertResult } from './complex.repository';
-import { Complex } from './domain/complex';
+import type { Complex } from './domain/complex';
 import { normalizeComplexName } from './domain/normalize-name';
-
-type ComplexRow = Prisma.ComplexGetPayload<Record<string, never>>;
+import { toComplexDomain } from './prisma-complex.mapper';
 
 /** 한 번에 처리할 upsert 건수 — 트랜잭션이 너무 길어지지 않게 */
 const CHUNK = 200;
-
-function toDomain(row: ComplexRow): Complex {
-  return new Complex({
-    id: row.id,
-    kaptCode: row.kaptCode,
-    name: row.name,
-    nameNormalized: row.nameNormalized,
-    regionCode: RegionCode.parse(row.regionCode),
-    address: row.address,
-    coordinate:
-      row.lat === null || row.lng === null ? null : new Coordinate(Number(row.lat), Number(row.lng)),
-    households: row.households,
-    buildingCount: row.buildingCount,
-    approvalDate: row.approvalDate,
-    builtYear: row.builtYear,
-    parkingCount: row.parkingCount,
-    heatingType: row.heatingType,
-    nearestSubwayM: row.nearestSubwayM,
-    nearestSchoolM: row.nearestSchoolM,
-  });
-}
 
 @Injectable()
 export class PrismaComplexRepository implements IComplexRepository {
@@ -40,7 +18,7 @@ export class PrismaComplexRepository implements IComplexRepository {
 
   async findById(id: number): Promise<Complex | null> {
     const row = await this.prisma.complex.findUnique({ where: { id } });
-    return row === null ? null : toDomain(row);
+    return row === null ? null : toComplexDomain(row);
   }
 
   async findByRegion(code: RegionCode): Promise<Complex[]> {
@@ -48,7 +26,7 @@ export class PrismaComplexRepository implements IComplexRepository {
       where: { regionCode: code.toString() },
       orderBy: { name: 'asc' },
     });
-    return rows.map(toDomain);
+    return rows.map(toComplexDomain);
   }
 
   /** 시군구 단위 조회 — 법정동코드 앞 5자리로 찾는다 */
@@ -57,7 +35,7 @@ export class PrismaComplexRepository implements IComplexRepository {
       where: { region: { sigunguCode } },
       orderBy: { name: 'asc' },
     });
-    return rows.map(toDomain);
+    return rows.map(toComplexDomain);
   }
 
   /**

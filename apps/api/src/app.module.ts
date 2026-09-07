@@ -11,6 +11,7 @@ import { HealthController } from './health.controller';
 import { MatchingModule } from './matching';
 import { ObservabilityModule } from './observability';
 import { RegionModule } from './region';
+import { SearchModule } from './search';
 import { TradeModule } from './trade';
 
 /**
@@ -31,6 +32,7 @@ import { TradeModule } from './trade';
     TradeModule,
     MatchingModule,
     CollectorModule,
+    SearchModule,
     AdminAuthModule,
   ],
   controllers: [HealthController],

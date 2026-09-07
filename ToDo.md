@@ -1439,11 +1439,31 @@ main().finally(() => prisma.$disconnect());
 ### Step 6 — L4 `search` + 프론트 MVP (2주)
 
 **API**
-- [ ] `SearchCondition.from()` 값 객체 (범위 검증)
-- [ ] `ComplexSearchService.search()` — 조건 필터 + 중위가 조인
-- [ ] `GET /complexes?regionCode=&priceMin=…`
-- [ ] `GET /complexes/:id/trades?area=` (페이지네이션)
-- [ ] `search_events` 기록 훅
+
+> **진행 메모 (2026-09-07)**: 브랜치 `feat/step6a-search-api`. API 부분 완료, 테스트 73개 추가(총 620개).
+>
+> 확정한 사항:
+> - **가격 필터를 SQL 이 아니라 애플리케이션에서 건다.** 중위가는 이상치를 제외해
+>   계산해야 하는데 그 규칙은 trade 모듈에 있다. SQL 로 AVG/MIN 을 쓰면 직거래가 섞인
+>   값으로 거르게 되어, 예산에 맞는다고 본 단지가 실제로는 아닌 상황이 생긴다.
+> - **면적 조건이 있으면 그 면적대의 중위가로 거른다.** 안 그러면 작은 평형이 싸다는
+>   이유로 "84㎡ 5억 이하" 검색에 엉뚱한 단지가 올라온다. 실측 확인:
+>   예산 20억 조건에서 전체 중위가 기준 1건 → 전용 60㎡ 이하 기준 3건.
+> - **거래가 없어 가격을 모르는 단지**는 예산 조건이 걸려 있으면 뺀다.
+>   "알 수 없음"을 "맞음"으로 보면 안 된다. 예산 조건이 없으면 남긴다.
+>   정렬에서는 항상 뒤로 — 0원으로 취급하면 맨 앞에 온다.
+> - **시군구를 고르면 그 아래 모든 동을 훑는다.** "강남구"를 골랐는데 강남구라는
+>   이름의 동만 찾으면 결과가 0건이 된다. 코드 뒤 5자리로 단계를 판별한다.
+> - 여러 단지의 중위가는 `medianPricesByComplex()` 로 한 번에 구한다.
+>   단지마다 조회하면 질의가 단지 수만큼 늘어난다.
+> - 검색 이력 기록이 실패해도 검색 결과는 정상 반환한다.
+> - `toComplexDomain` 매퍼를 complex 모듈로 빼 검색 모듈과 공유 —
+>   변환 규칙이 두 벌이 되면 한쪽만 고쳐지는 사고가 난다.
+- [x] `SearchCondition.from()` 값 객체 (범위 검증)
+- [x] `ComplexSearchService.search()` — 조건 필터 + 중위가 조인
+- [x] `GET /complexes?regionCode=&priceMin=…`
+- [x] `GET /complexes/:id/trades?area=` (페이지네이션)
+- [x] `search_events` 기록 훅
 
 **Web (React)**
 - [ ] `lib/api-client.ts` — `packages/shared` DTO 타입 사용

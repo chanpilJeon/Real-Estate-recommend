@@ -7,6 +7,7 @@ import { PrismaService } from '../core';
 import { buildRentSourceHash, buildTradeSourceHash } from './domain/source-hash';
 import { Rent, Trade } from './domain/trade';
 import type {
+  AreaRangeFilter,
   BulkResult,
   ITradeRepository,
   RentUpsertInput,
@@ -114,6 +115,32 @@ export class PrismaTradeRepository implements ITradeRepository {
       where: this.whereOf(query),
       orderBy: { contractedAt: 'desc' },
       take: query.limit ?? DEFAULT_LIMIT,
+    });
+    return rows.map(toTrade);
+  }
+
+  async findTradesForComplexes(
+    complexIds: number[],
+    since: Date,
+    areaRange?: AreaRangeFilter,
+  ): Promise<Trade[]> {
+    if (complexIds.length === 0) return [];
+
+    const rows = await this.prisma.trade.findMany({
+      where: {
+        complexId: { in: complexIds },
+        isCanceled: false,
+        contractedAt: { gte: since },
+        ...(areaRange === undefined
+          ? {}
+          : {
+              exclusiveSqm: {
+                ...(areaRange.minSqm === undefined ? {} : { gte: areaRange.minSqm }),
+                ...(areaRange.maxSqm === undefined ? {} : { lte: areaRange.maxSqm }),
+              },
+            }),
+      },
+      orderBy: { contractedAt: 'desc' },
     });
     return rows.map(toTrade);
   }

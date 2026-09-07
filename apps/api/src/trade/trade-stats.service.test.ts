@@ -78,6 +78,23 @@ class FakeTradeRepository implements ITradeRepository {
   relinkByRawName(): Promise<number> {
     return Promise.resolve(0);
   }
+  findTradesForComplexes(
+    complexIds: number[],
+    since: Date,
+    areaRange?: { minSqm?: number; maxSqm?: number },
+  ): Promise<Trade[]> {
+    return Promise.resolve(
+      this.trades.filter(
+        (t) =>
+          t.complexId !== null &&
+          complexIds.includes(t.complexId) &&
+          t.isUsableForStats() &&
+          t.contractedAt >= since &&
+          (areaRange?.minSqm === undefined || t.area.toSqm() >= areaRange.minSqm) &&
+          (areaRange?.maxSqm === undefined || t.area.toSqm() <= areaRange.maxSqm),
+      ),
+    );
+  }
 }
 
 describe('TradeStatsService — 가격 통계', () => {
@@ -215,6 +232,54 @@ describe('TradeStatsService — 가격 통계', () => {
 
       expect(await service.findRecentTrades(7)).toHaveLength(2);
       expect(repo.queries.at(-1)?.includeCanceled).toBe(true);
+    });
+  });
+
+  describe('medianPricesByComplex — 여러 단지 한 번에', () => {
+    it('단지별로 나눠 각각 중위가를 낸다', async () => {
+      repo.trades = [
+        trade(180_000, '2026-08-01'),
+        trade(190_000, '2026-08-02'),
+        new Trade({
+          id: 'x',
+          complexId: 8,
+          regionCode: '1168010100',
+          rawName: '다른단지',
+          price: Money.fromManwon(90_000),
+          area: 전용84,
+          contractedAt: new Date('2026-08-03T00:00:00Z'),
+          floor: 3,
+          builtYear: 2010,
+          isCanceled: false,
+        }),
+      ];
+
+      const medians = await service.medianPricesByComplex([7, 8]);
+      expect(medians.get(7)?.toManwon()).toBe(185_000);
+      expect(medians.get(8)?.toManwon()).toBe(90_000);
+    });
+
+    it('거래가 없는 단지는 아예 담기지 않는다 (0원으로 만들지 않는다)', async () => {
+      repo.trades = [trade(180_000, '2026-08-01')];
+      const medians = await service.medianPricesByComplex([7, 99]);
+
+      expect(medians.has(7)).toBe(true);
+      expect(medians.has(99)).toBe(false);
+    });
+
+    it('여기서도 이상치를 제외한다 (단건 조회와 같은 규칙)', async () => {
+      repo.trades = [
+        trade(180_000, '2026-08-01'),
+        trade(185_000, '2026-08-02'),
+        trade(190_000, '2026-08-03'),
+        trade(195_000, '2026-08-04'),
+        trade(10_000, '2026-08-05'),
+      ];
+      expect((await service.medianPricesByComplex([7])).get(7)?.toManwon()).toBe(187_500);
+    });
+
+    it('빈 목록은 빈 결과', async () => {
+      expect((await service.medianPricesByComplex([])).size).toBe(0);
     });
   });
 
