@@ -1431,6 +1431,7 @@ main().finally(() => prisma.$disconnect());
 - [x] 지역 단위 실패 격리 (한 지역 실패가 전체 중단시키지 않음)
 - [x] cron 등록 (매일 06:00), 모든 실행을 `JobRunRecorder.run()`으로 감싸기
 - [~] 3년치 수집 파이프라인 검증 완료 (데모 데이터) / **국토부 공개시스템 표본 대조는 API 키 발급 후** — docs/API-VERIFICATION.md 참조
+- [x] **CSV 적재 경로** (`pnpm load-csv`) — 공공데이터포털 키 없이 rt.molit.go.kr 에서 받은 CSV 를 API 와 **같은 경로**(매칭·중복차단·시세 캐시)로 넣는다. `sourceHash` 가 같아 나중에 API 로 갈아타도 중복되지 않는다
 
 **🧪 테스트 지점 M3**: 데이터가 실제와 맞는지 대조 (7절에 비기술자용 대조 방법 명시)
 

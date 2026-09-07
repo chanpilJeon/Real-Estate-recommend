@@ -39,3 +39,7 @@ next-env.d.ts
 # 수동으로 내려받는 원본 데이터 (용량이 크고 출처가 정부 사이트)
 data/*
 !data/README.md
+# CSV 를 넣을 자리는 빈 폴더로 남겨 둔다 (README 가 이 경로를 안내한다)
+!data/csv/
+data/csv/*
+!data/csv/.gitkeep

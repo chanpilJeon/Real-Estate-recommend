@@ -133,8 +133,19 @@ export function ComplexDetailPanel({ complexId, onClose }: Props) {
       {detail !== null && (
         <>
           <div className="spec-grid">
-            <Spec label="세대수" value={`${detail.households.toLocaleString()}세대`} />
-            <Spec label="동수" value={`${detail.buildingCount}개동`} />
+            {/*
+              CSV 로만 적재한 단지는 세대수·동수를 알 수 없다 (0으로 들어온다).
+              "0세대" 로 보여 주면 사실인 것처럼 읽히므로 모른다고 말한다.
+              단지에 세대가 0인 경우는 없으니 0 = 미상으로 봐도 된다.
+            */}
+            <Spec
+              label="세대수"
+              value={detail.households > 0 ? `${detail.households.toLocaleString()}세대` : '미상'}
+            />
+            <Spec
+              label="동수"
+              value={detail.buildingCount > 0 ? `${detail.buildingCount}개동` : '미상'}
+            />
             <Spec label="연식" value={detail.ageYears === null ? '미상' : `${detail.ageYears}년차`} />
             <Spec
               label="세대당 주차"

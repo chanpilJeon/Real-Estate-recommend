@@ -56,7 +56,7 @@ export function ComplexList({ items, total, loading, error, selectedId, onSelect
                   <span className="complex-card__price">{formatManwon(item.medianPriceManwon)}</span>
                 </div>
                 <div className="complex-card__meta">
-                  <span>{item.households.toLocaleString()}세대</span>
+                  {item.households > 0 && <span>{item.households.toLocaleString()}세대</span>}
                   {item.builtYear !== null && <span>{item.builtYear}년</span>}
                   {walk !== null && <span>역 {walk}</span>}
                 </div>

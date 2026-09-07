@@ -21,8 +21,8 @@
     "db:studio": "prisma studio",
     "seed:admin": "tsx scripts/seed-admin.ts",
     "seed:region": "tsx scripts/seed-region.ts",
-    "seed:demo": "tsx scripts/seed-demo.ts",
-    "collect": "tsx --tsconfig apps/api/tsconfig.json scripts/collect.ts"
+    "collect": "tsx --tsconfig apps/api/tsconfig.json scripts/collect.ts",
+    "load-csv": "tsx --tsconfig apps/api/tsconfig.json scripts/load-csv.ts"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",
