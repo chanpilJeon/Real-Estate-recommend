@@ -5,7 +5,7 @@ import { Complex, type ComplexProps } from '../complex';
 
 import { ComplexSearchService } from './complex-search.service';
 import { SearchCondition } from './domain/search-condition';
-import type { ISearchEventStore, ISearchRepository } from './search.repository';
+import type { CollectedRegion, ISearchEventStore, ISearchRepository } from './search.repository';
 
 const 역삼동 = '1168010100';
 
@@ -34,6 +34,9 @@ class FakeSearchRepository implements ISearchRepository {
   constructor(public complexes: Complex[] = []) {}
   findCandidates(): Promise<Complex[]> {
     return Promise.resolve(this.complexes);
+  }
+  collectedRegions(): Promise<CollectedRegion[]> {
+    return Promise.resolve([]);
   }
 }
 

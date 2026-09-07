@@ -5,7 +5,7 @@ import type { ILogger } from '../core';
 import type { TradeStatsService } from '../trade';
 
 import type { SearchCondition } from './domain/search-condition';
-import type { ISearchEventStore, ISearchRepository } from './search.repository';
+import type { CollectedRegion, ISearchEventStore, ISearchRepository } from './search.repository';
 
 const CTX = 'search';
 
@@ -62,6 +62,11 @@ export class ComplexSearchService {
     void this.recordEvent(condition, total);
 
     return { items, total, page: condition.page, pageSize: condition.pageSize };
+  }
+
+  /** 데이터가 실제로 쌓인 지역 목록 (검색 결과가 비었을 때 안내용) */
+  collectedRegions(): Promise<CollectedRegion[]> {
+    return this.repository.collectedRegions();
   }
 
   private sortBy(

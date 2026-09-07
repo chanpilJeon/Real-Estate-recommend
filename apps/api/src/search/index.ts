@@ -2,4 +2,4 @@
 export { SearchModule } from './search.module';
 export { ComplexSearchService, type SortKey } from './complex-search.service';
 export { SearchCondition, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from './domain/search-condition';
-export { SEARCH_REPOSITORY, type ISearchRepository } from './search.repository';
+export { SEARCH_REPOSITORY, type ISearchRepository, type CollectedRegion } from './search.repository';

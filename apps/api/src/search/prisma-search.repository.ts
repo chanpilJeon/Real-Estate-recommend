@@ -5,7 +5,7 @@ import { toComplexDomain, type Complex } from '../complex';
 import { PrismaService } from '../core';
 
 import type { SearchCondition } from './domain/search-condition';
-import type { ISearchEventStore, ISearchRepository } from './search.repository';
+import type { CollectedRegion, ISearchEventStore, ISearchRepository } from './search.repository';
 
 /**
  * 한 번에 훑을 최대 단지 수.
@@ -27,6 +27,53 @@ export class PrismaSearchRepository implements ISearchRepository {
 
     // complex 모듈의 도메인 모델로 되돌린다 — 판단 로직은 그쪽에 있다
     return rows.map(toComplexDomain);
+  }
+
+  async collectedRegions(): Promise<CollectedRegion[]> {
+    const grouped = await this.prisma.complex.groupBy({
+      by: ['regionCode'],
+      _count: { regionCode: true },
+    });
+    if (grouped.length === 0) return [];
+
+    const regions = await this.prisma.region.findMany({
+      where: { code: { in: grouped.map((g) => g.regionCode) } },
+      select: { code: true, sigunguCode: true, sido: true, sigungu: true },
+    });
+    const regionByCode = new Map(regions.map((r) => [r.code, r]));
+
+    // 동 단위로 흩어진 단지를 시군구로 묶는다 — 사용자는 "강남구" 단위로 생각한다
+    const bySigungu = new Map<string, CollectedRegion>();
+    for (const group of grouped) {
+      const region = regionByCode.get(group.regionCode);
+      if (region === undefined) continue;
+
+      const existing = bySigungu.get(region.sigunguCode);
+      if (existing === undefined) {
+        bySigungu.set(region.sigunguCode, {
+          sigunguCode: region.sigunguCode,
+          name: `${region.sido} ${region.sigungu}`,
+          complexCount: group._count.regionCode,
+          tradeCount: 0,
+          regionCode: `${region.sigunguCode}00000`,
+        });
+      } else {
+        existing.complexCount += group._count.regionCode;
+      }
+    }
+
+    // 지역별 실거래 건수
+    const tradeCounts = await this.prisma.trade.groupBy({
+      by: ['regionCode'],
+      _count: { regionCode: true },
+    });
+    for (const group of tradeCounts) {
+      const sigunguCode = group.regionCode.slice(0, 5);
+      const entry = bySigungu.get(sigunguCode);
+      if (entry !== undefined) entry.tradeCount += group._count.regionCode;
+    }
+
+    return [...bySigungu.values()].sort((a, b) => b.complexCount - a.complexCount);
   }
 
   private whereOf(condition: SearchCondition): Prisma.ComplexWhereInput {

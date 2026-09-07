@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, ApiError } from '../lib/api-client';
 
+import { CollectedRegionHint } from './CollectedRegionHint';
 import { ComplexDetailPanel } from './ComplexDetailPanel';
 import { ComplexList } from './ComplexList';
 import { ConditionPanel, type Conditions } from './ConditionPanel';
@@ -140,23 +141,38 @@ export function SearchScreen() {
 
       <section className={`search-results ${tab === 'map' ? 'search-results--hidden-mobile' : ''}`}>
         {regionCode === '' ? (
-          <div className="list-state stack stack--2">
-            <p style={{ color: 'var(--color-text-primary)' }}>지역을 먼저 골라주세요.</p>
-            <p className="text-muted">
-              &lsquo;영통&rsquo;, &lsquo;강남구&rsquo; 처럼 입력하면 후보가 나옵니다.
-              <br />
-              &lsquo;미사&rsquo; 같은 생활권 이름도 됩니다.
-            </p>
+          <div className="list-state stack stack--4">
+            <div className="stack stack--2">
+              <p style={{ color: 'var(--color-text-primary)' }}>
+                왼쪽 <strong>지역</strong> 칸에 지역명을 입력해 주세요.
+              </p>
+              <p className="text-muted">
+                &lsquo;강남구&rsquo;, &lsquo;역삼동&rsquo; 처럼 입력하면 후보가 나오고,
+                <br />
+                후보를 <strong>클릭해서 골라야</strong> 검색이 시작됩니다.
+                <br />
+                &lsquo;미사&rsquo; 같은 생활권 이름도 됩니다.
+              </p>
+            </div>
+            <CollectedRegionHint searched={false} onPick={(code) => updateUrl({ regionCode: code })} />
           </div>
         ) : (
-          <ComplexList
-            items={items}
-            total={total}
-            loading={loading}
-            error={error}
-            selectedId={selectedId}
-            onSelect={selectComplex}
-          />
+          <>
+            <ComplexList
+              items={items}
+              total={total}
+              loading={loading}
+              error={error}
+              selectedId={selectedId}
+              onSelect={selectComplex}
+            />
+            {!loading && error === null && items.length === 0 && (
+              <CollectedRegionHint
+                searched
+                onPick={(code) => updateUrl({ regionCode: code })}
+              />
+            )}
+          </>
         )}
       </section>
 

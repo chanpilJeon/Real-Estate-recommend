@@ -1025,3 +1025,43 @@ svg {
     border-top-right-radius: var(--radius-16);
   }
 }
+
+/* 데이터가 있는 지역 안내 */
+.collected-hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-status-info-bg);
+  border: 1px solid var(--color-status-info-border);
+  border-radius: var(--radius-8);
+  font-size: var(--text-mini);
+}
+.collected-hint .chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  height: auto;
+  padding: 6px 12px;
+}
+.collected-hint__count {
+  font-size: var(--text-tiny);
+  opacity: 0.7;
+  font-weight: var(--font-weight-normal);
+}
+.collected-hint code {
+  background: var(--color-bg-tertiary);
+  padding: 1px 5px;
+  border-radius: var(--radius-4);
+}
+
+.site-header__hint {
+  font-size: var(--text-mini);
+}
+@media (max-width: 768px) {
+  .site-header__hint {
+    display: none;
+  }
+}

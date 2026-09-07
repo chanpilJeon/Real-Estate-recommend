@@ -26,6 +26,15 @@ export class SearchController {
     private readonly tradeStats: TradeStatsService,
   ) {}
 
+  /**
+   * GET /api/collected-regions
+   * 실제로 데이터가 쌓인 지역. 화면이 "어디를 검색하면 되는지" 알려줄 때 쓴다.
+   */
+  @Get('collected-regions')
+  collectedRegions(): ReturnType<ComplexSearchService['collectedRegions']> {
+    return this.searchService.collectedRegions();
+  }
+
   /** GET /api/complexes?regionCode=&priceMin=&priceMax=&areaMin=&areaMax=&builtAfter=&minHouseholds= */
   @Get('complexes')
   async search(

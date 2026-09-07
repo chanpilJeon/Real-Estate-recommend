@@ -73,7 +73,18 @@ async function request<T>(path: string, params?: Record<string, unknown>): Promi
   return (await response.json()) as T;
 }
 
+/** 실제로 데이터가 쌓인 지역 */
+export interface CollectedRegion {
+  sigunguCode: string;
+  name: string;
+  complexCount: number;
+  tradeCount: number;
+  regionCode: string;
+}
+
 export const api = {
+  collectedRegions: () => request<CollectedRegion[]>('/api/collected-regions'),
+
   searchRegions: (q: string, limit = 10) =>
     request<{ keyword: string; candidates: RegionCandidateDto[] }>('/api/regions/search', { q, limit }),
 
