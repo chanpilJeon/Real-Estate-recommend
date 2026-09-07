@@ -925,6 +925,53 @@ svg {
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/*
+  외부 서비스 연결 (Concept.md 7절 "매물 확인은 외부 링크로 연결").
+  주 행동(검색·추천)이 아니라 보조 행동이라 accent 색을 쓰지 않고,
+  표면 단계(level-2 → level-3)와 테두리로만 눌림을 표현한다.
+*/
+.link-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+.ext-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-level-2);
+  border: 1px solid var(--color-border-translucent);
+  border-radius: var(--radius-8);
+  text-decoration: none;
+  transition:
+    background-color var(--speed-quick) ease,
+    border-color var(--speed-quick) ease;
+}
+.ext-link:hover {
+  background: var(--color-bg-level-3);
+  border-color: var(--color-border-secondary);
+}
+.ext-link__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+/* 새 탭으로 나간다는 표시 — 링크마다 아이콘을 넣지 않고 CSS로 붙인다 */
+.ext-link__label::after {
+  content: '\2197';
+  font-size: var(--text-micro);
+  color: var(--color-text-quaternary);
+}
+.ext-link__hint {
+  font-size: var(--text-micro);
+  color: var(--color-text-quaternary);
+  word-break: keep-all;
+}
 .chart-box {
   padding: var(--space-2);
   background: var(--color-bg-level-2);

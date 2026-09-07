@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 
 import { api, ApiError, formatManwon, formatWalk, type TradeRow } from '../lib/api-client';
+import { externalLinks } from '../lib/external-links';
 
 interface Props {
   complexId: number;
@@ -155,6 +156,33 @@ export function ComplexDetailPanel({ complexId, onClose }: Props) {
               ))}
             </div>
           )}
+
+          {/*
+            매물(호가)은 공인중개사만 광고할 수 있고 타 서비스 크롤링은 약관 위반이라
+            우리가 직접 싣지 않는다 (Concept.md 3.3 / 7절).
+            대신 "어느 단지를 볼지"를 정해 준 다음 기존 서비스로 넘긴다.
+          */}
+          <div className="stack stack--2">
+            <span className="field-label">이 단지 더 알아보기</span>
+            <div className="link-row">
+              {externalLinks(detail).map((link) => (
+                <a
+                  key={link.id}
+                  className="ext-link"
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={link.hint}
+                >
+                  <span className="ext-link__label">{link.label}</span>
+                  <span className="ext-link__hint">{link.hint}</span>
+                </a>
+              ))}
+            </div>
+            <p className="field-hint">
+              매물·호가는 저희가 직접 다루지 않고 기존 서비스로 연결합니다. 새 탭에서 열립니다.
+            </p>
+          </div>
 
           {areas.length > 0 && (
             <div className="stack stack--2">
