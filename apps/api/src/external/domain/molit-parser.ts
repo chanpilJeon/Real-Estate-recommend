@@ -75,14 +75,8 @@ export interface MolitPage<T> {
 function openEnvelope(xml: string): { items: XmlNode[]; body: XmlNode } {
   const root = parser.parse(xml) as XmlNode;
 
-  // data.go.kr 게이트웨이 오류 (키 미등록·트래픽 초과 등)
-  const gateway = root['OpenAPI_ServiceResponse'] as XmlNode | undefined;
-  if (gateway !== undefined) {
-    const header = (gateway['cmmMsgHeader'] ?? {}) as XmlNode;
-    const code = pick(header, 'returnReasonCode');
-    const reason = pick(header, 'returnAuthMsg', 'errMsg');
-    throw new MolitApiError(code, translateGatewayError(code, reason));
-  }
+  const gateway = gatewayErrorFrom(xml);
+  if (gateway !== null) throw gateway;
 
   const response = (root['response'] ?? {}) as XmlNode;
   const header = (response['header'] ?? {}) as XmlNode;
@@ -168,6 +162,27 @@ export function parseRentXml(xml: string, sigunguCode: string): MolitPage<RawRen
   }
 
   return { items: rents, ...pageInfo(body) };
+}
+
+/**
+ * data.go.kr 게이트웨이 오류(키 미등록·트래픽 초과 등)인지 본다.
+ *
+ * JSON 으로 주는 API 도 **오류일 때는 XML 로 답한다.** 그래서 이 판별은
+ * XML 파서를 쓰는 곳뿐 아니라 JSON 을 쓰는 K-apt 클라이언트에서도 필요하다.
+ *
+ * @returns 게이트웨이 오류면 그 오류, 정상 응답이면 null
+ */
+export function gatewayErrorFrom(body: string): MolitApiError | null {
+  if (!body.trimStart().startsWith('<')) return null;
+
+  const root = parser.parse(body) as XmlNode;
+  const gateway = root['OpenAPI_ServiceResponse'] as XmlNode | undefined;
+  if (gateway === undefined) return null;
+
+  const header = (gateway['cmmMsgHeader'] ?? {}) as XmlNode;
+  const code = pick(header, 'returnReasonCode');
+  const reason = pick(header, 'returnAuthMsg', 'errMsg');
+  return new MolitApiError(code, translateGatewayError(code, reason));
 }
 
 /** 게이트웨이 오류코드를 사람이 읽는 문장으로 (운영자가 바로 조치할 수 있게) */

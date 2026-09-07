@@ -9,7 +9,8 @@ import type { IMolitClient } from '../ports';
 import { RetryingFetch } from './retrying-fetch';
 
 const BASE = 'https://apis.data.go.kr/1613000';
-const TRADE_PATH = `${BASE}/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev`;
+// 2026-09 실제 키로 확인: 예전 'Dev' 접미사 경로는 없어졌다 (등록되지 않은 서비스키로 응답)
+const TRADE_PATH = `${BASE}/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade`;
 const RENT_PATH = `${BASE}/RTMSDataSvcAptRent/getRTMSDataSvcAptRent`;
 
 const ROWS_PER_PAGE = 1000;
@@ -20,9 +21,8 @@ const CTX = 'molit-client';
 /**
  * 국토교통부 실거래가 API 클라이언트 (ToDo.md 3.6).
  *
- * ⚠ **아직 실제 키로 검증하지 못했다.** 공개된 스펙 문서를 기준으로 작성했고,
- *   파서는 신·구 필드명을 모두 받아들이도록 방어적으로 만들었다.
- *   키를 발급받으면 `docs/API-VERIFICATION.md` 의 절차로 대조해야 한다.
+ * 2026-09-08 실제 키로 매매·전월세 응답을 확인했다 (docs/API-VERIFICATION.md).
+ * 파서는 신·구 필드명을 모두 받아들이도록 방어적으로 둔다 — 국토부가 필드명을 바꾼 이력이 있다.
  */
 @Injectable()
 export class MolitHttpClient implements IMolitClient {
