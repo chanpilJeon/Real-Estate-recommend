@@ -17,6 +17,13 @@ export interface IRegionRepository {
   searchByKeyword(keyword: string, limit: number): Promise<Region[]>;
   /** 생활권 별칭("미사")에 연결된 지역들. 별칭은 정확히 일치할 때만 인정한다. */
   findByAlias(alias: string): Promise<Region[]>;
+  /**
+   * 시군구 + 법정동명으로 정확히 찾는다.
+   * 실거래 API 는 법정동 **이름**("역삼동")만 주기 때문에 수집기가 코드로 바꿔야 한다.
+   */
+  findByDongName(sigunguCode: string, dongName: string): Promise<Region | null>;
+  /** 시군구 단위 지역 (동이 없는 대표 행) */
+  findSigunguRegion(sigunguCode: string): Promise<Region | null>;
 }
 
 /** DI 토큰 — 인터페이스는 런타임에 존재하지 않는다. */

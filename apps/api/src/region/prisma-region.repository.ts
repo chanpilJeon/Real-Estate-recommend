@@ -58,6 +58,23 @@ export class PrismaRegionRepository implements IRegionRepository {
     return rows.map(toDomain);
   }
 
+  async findByDongName(sigunguCode: string, dongName: string): Promise<Region | null> {
+    const row = await this.prisma.region.findFirst({
+      where: { sigunguCode, dong: dongName, isActive: true },
+      select: SELECT,
+    });
+    return row === null ? null : toDomain(row);
+  }
+
+  async findSigunguRegion(sigunguCode: string): Promise<Region | null> {
+    const row = await this.prisma.region.findFirst({
+      // 시군구 단위 행은 뒤 5자리가 00000 이다
+      where: { sigunguCode, code: { endsWith: '00000' }, isActive: true },
+      select: SELECT,
+    });
+    return row === null ? null : toDomain(row);
+  }
+
   async findByAlias(alias: string): Promise<Region[]> {
     const rows = await this.prisma.regionAlias.findMany({
       where: { alias, region: { isActive: true } },

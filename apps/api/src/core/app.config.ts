@@ -14,6 +14,11 @@ export class AppConfig {
     readonly kakaoRestKey: string,
     readonly adminSessionSecret: string,
     readonly demoMode: boolean,
+    /**
+     * 수집 대상 시군구 코드 5자리 목록.
+     * 전국을 매일 훑으면 공공 API 한도를 금방 넘긴다 — 관심 지역만 모은다. (ToDo.md 9절)
+     */
+    readonly collectSigunguCodes: string[],
   ) {}
 
   get isProduction(): boolean {
@@ -64,6 +69,17 @@ export class AppConfig {
       problems.push(`API_PORT 값이 올바르지 않습니다 (받은 값: ${String(env.API_PORT)})`);
     }
 
+    const collectSigunguCodes = (env.COLLECT_SIGUNGU_CODES ?? '')
+      .split(',')
+      .map((code) => code.trim())
+      .filter((code) => code !== '');
+    const invalidCodes = collectSigunguCodes.filter((code) => !/^\d{5}$/.test(code));
+    if (invalidCodes.length > 0) {
+      problems.push(
+        `COLLECT_SIGUNGU_CODES 에 5자리 숫자가 아닌 값이 있습니다: ${invalidCodes.join(', ')}`,
+      );
+    }
+
     const rawNodeEnv = env.NODE_ENV ?? 'development';
     const nodeEnv =
       rawNodeEnv === 'production' || rawNodeEnv === 'test' ? rawNodeEnv : 'development';
@@ -84,6 +100,7 @@ export class AppConfig {
       kakaoRestKey,
       adminSessionSecret,
       demoMode,
+      collectSigunguCodes,
     );
   }
 
@@ -104,6 +121,7 @@ export class AppConfig {
       demoMode: this.demoMode,
       molitApiKey: this.molitApiKey ? '설정됨' : '없음',
       kakaoRestKey: this.kakaoRestKey ? '설정됨' : '없음',
+      collectSigunguCodes: this.collectSigunguCodes.join(',') || '없음',
     };
   }
 }

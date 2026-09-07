@@ -44,6 +44,20 @@ class FakeRegionRepository implements IRegionRepository {
   findByAlias(alias: string): Promise<Region[]> {
     return Promise.resolve(this.aliases[alias] ?? []);
   }
+
+  findByDongName(sigunguCode: string, dongName: string): Promise<Region | null> {
+    const hit = this.regions.find(
+      (r) => r.code.toSigunguCode() === sigunguCode && r.dong === dongName,
+    );
+    return Promise.resolve(hit ?? null);
+  }
+
+  findSigunguRegion(sigunguCode: string): Promise<Region | null> {
+    const hit = this.regions.find(
+      (r) => r.code.toSigunguCode() === sigunguCode && !r.isDongLevel(),
+    );
+    return Promise.resolve(hit ?? null);
+  }
 }
 
 describe('RegionSearchService — 지역 검색', () => {
@@ -122,6 +136,26 @@ describe('RegionSearchService — 지역 검색', () => {
 
     it('없는 별칭은 빈 배열', async () => {
       expect(await service.resolveAlias('없는별칭')).toEqual([]);
+    });
+  });
+
+  describe('resolveDongCode — 실거래 API 의 법정동명을 코드로', () => {
+    it('이름이 맞으면 그 동의 코드를 준다', async () => {
+      const code = await service.resolveDongCode('11680', '역삼동');
+      expect(code?.toString()).toBe('1168010100');
+    });
+
+    it('앞뒤 공백을 다듬는다 (API 응답이 흔들려도)', async () => {
+      expect((await service.resolveDongCode('11680', ' 역삼동 '))?.toString()).toBe('1168010100');
+    });
+
+    it('모르는 동이면 시군구 대표 코드로 대체한다 (거래를 버리지 않는다)', async () => {
+      const code = await service.resolveDongCode('11680', '없는동');
+      expect(code?.toString()).toBe('1168000000');
+    });
+
+    it('시군구조차 없으면 null', async () => {
+      expect(await service.resolveDongCode('99999', '아무동')).toBeNull();
     });
   });
 

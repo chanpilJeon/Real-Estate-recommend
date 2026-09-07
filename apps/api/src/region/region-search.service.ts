@@ -73,6 +73,18 @@ export class RegionSearchService {
   async findByCode(code: string): Promise<Region | null> {
     return this.repository.findByCode(RegionCode.parse(code));
   }
+
+  /**
+   * 실거래 API 가 준 법정동 **이름**을 코드로 바꾼다 (수집기가 쓴다).
+   * 못 찾으면 시군구 대표 행으로 대체한다 — 동을 모른다고 거래를 버리면 안 된다.
+   */
+  async resolveDongCode(sigunguCode: string, dongName: string): Promise<RegionCode | null> {
+    const exact = await this.repository.findByDongName(sigunguCode, dongName.trim());
+    if (exact !== null) return exact.code;
+
+    const fallback = await this.repository.findSigunguRegion(sigunguCode);
+    return fallback?.code ?? null;
+  }
 }
 
 function toCandidate(region: Region, matchType: RegionCandidateDto['matchType']): RegionCandidateDto {

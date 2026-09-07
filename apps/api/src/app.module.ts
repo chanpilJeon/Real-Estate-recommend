@@ -3,6 +3,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AdminAuthModule } from './admin-auth';
+import { CollectorModule } from './collector';
 import { ComplexModule } from './complex';
 import { CoreModule } from './core';
 import { ExternalModule } from './external';
@@ -29,6 +30,7 @@ import { TradeModule } from './trade';
     ComplexModule,
     TradeModule,
     MatchingModule,
+    CollectorModule,
     AdminAuthModule,
   ],
   controllers: [HealthController],
