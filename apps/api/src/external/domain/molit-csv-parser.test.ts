@@ -6,7 +6,7 @@ import {
   parseCsvLine,
   parseRentCsv,
   parseTradeCsv,
-  splitSigunguAndDong,
+  splitRegionText,
 } from './molit-csv-parser';
 
 /**
@@ -76,21 +76,52 @@ describe('parseCsvLine — 따옴표 안의 쉼표 지키기', () => {
   });
 });
 
-describe('splitSigunguAndDong — 시군구와 법정동 가르기', () => {
+describe('splitRegionText — 시군구와 법정동 가르기', () => {
+  /** regions 테이블이 아는 시군구 이름 (실제 표기) */
+  const KNOWN = new Set([
+    '서울특별시 강남구',
+    '경기도 수원시 영통구',
+    '세종특별자치시',
+    '경기도 양평군',
+    '경기도 남양주시',
+    '대구광역시 달성군',
+    '경기도 화성시 효행구',
+  ]);
+  const isKnown = (name: string): boolean => KNOWN.has(name);
+  const split = (text: string) => splitRegionText(text, isKnown);
+
   it.each([
-    ['서울특별시 강남구 수서동', '서울특별시 강남구', '수서동'],
-    ['경기도 수원시 영통구 영통동', '경기도 수원시 영통구', '영통동'],
-    ['세종특별자치시 도담동', '세종특별자치시', '도담동'],
-    ['경기도 양평군 양평읍', '경기도 양평군', '양평읍'],
-  ])('%s → 시군구 %s / 동 %s', (full, sigungu, dong) => {
-    expect(splitSigunguAndDong(full)).toEqual({ sigunguName: sigungu, legalDongName: dong });
+    // 토막 수가 지역마다 달라서, 위치만 보고는 가를 수 없다
+    ['서울특별시 강남구 수서동', '서울특별시 강남구', '수서동'], // 3
+    ['세종특별자치시 도담동', '세종특별자치시', '도담동'], // 2 — 시군구가 없다
+    ['경기도 수원시 영통구 영통동', '경기도 수원시 영통구', '영통동'], // 4 — 시 아래 구
+    ['대구광역시 달성군 현풍읍 중리', '대구광역시 달성군', '현풍읍'], // 4 — 읍·면은 리까지
+    ['경기도 화성시 효행구 봉담읍 상리', '경기도 화성시 효행구', '봉담읍'], // 5 — 둘 다
+    ['경기도 양평군 양평읍', '경기도 양평군', '양평읍'], // 3 — 리가 없는 읍
+  ])('%s → 시군구 %s / 법정동 %s', (text, sigungu, dong) => {
+    expect(split(text)).toEqual({ sigunguName: sigungu, legalDongName: dong });
   });
 
-  it('토큰이 하나뿐이면 동은 비운다', () => {
-    expect(splitSigunguAndDong('세종특별자치시')).toEqual({
-      sigunguName: '세종특별자치시',
-      legalDongName: '',
+  it('리는 버린다 — 국토부 API 도 법정동으로 읍·면까지만 준다', () => {
+    expect(split('경기도 남양주시 진접읍 내곡리')?.legalDongName).toBe('진접읍');
+  });
+
+  it('더 긴 시군구가 먼저 맞아야 한다 ("경기도 수원시"가 아니라 "경기도 수원시 영통구")', () => {
+    const both = (name: string): boolean =>
+      name === '경기도 수원시' || name === '경기도 수원시 영통구';
+    expect(splitRegionText('경기도 수원시 영통구 영통동', both)).toEqual({
+      sigunguName: '경기도 수원시 영통구',
+      legalDongName: '영통동',
     });
+  });
+
+  it('모르는 시군구면 null (조용히 엉뚱한 지역에 넣지 않는다)', () => {
+    expect(split('어딘가도 없는시 없는동')).toBeNull();
+  });
+
+  it('법정동이 될 토막이 남지 않으면 null', () => {
+    expect(split('세종특별자치시')).toBeNull();
+    expect(split('   ')).toBeNull();
   });
 });
 
@@ -105,8 +136,8 @@ describe('parseTradeCsv — 아파트 매매', () => {
     const [trade] = parseTradeCsv(tradeCsv(TRADE_ROWS[0]!)).items;
 
     expect(trade).toMatchObject({
-      sigunguName: '서울특별시 강남구',
-      legalDongName: '수서동',
+      // 어디까지가 시군구인지는 regions 테이블을 봐야 알 수 있어서 원문 그대로 들고 나간다
+      regionText: '서울특별시 강남구 수서동',
       apartmentName: '삼익',
       exclusiveSqm: 49.2,
       priceManwon: 212000, // "212,000" 의 쉼표를 지운다

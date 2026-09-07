@@ -136,30 +136,48 @@ function toDate(yearMonth: string, day: string): Date | null {
   return new Date(Date.UTC(year, month - 1, dayNo));
 }
 
+/** 시군구 이름은 길어야 세 토막이다 ("경기도 수원시 영통구") */
+const MAX_SIGUNGU_TOKENS = 3;
+
 /**
- * "서울특별시 강남구 수서동" → 시군구 이름과 법정동으로 가른다.
- * 마지막 토큰이 법정동(읍·면 포함), 나머지가 시군구다.
- * 세종시("세종특별자치시 도담동")처럼 시군구가 없는 곳도 이 규칙으로 맞는다.
+ * 시군구 칸을 시군구 이름과 법정동으로 가른다.
+ *
+ * ⚠ 마지막 토큰을 법정동으로 보면 안 된다. 토막 수가 지역마다 다르다:
+ *   "세종특별자치시 도담동"                  (2)
+ *   "서울특별시 강남구 역삼동"                (3)
+ *   "경기도 수원시 영통구 영통동"             (4) — 시 아래 구
+ *   "대구광역시 달성군 현풍읍 중리"           (4) — 읍·면은 리까지 온다
+ *   "경기도 화성시 효행구 봉담읍 상리"        (5) — 둘 다
+ * 4토막짜리 두 줄이 서로 다른 구조라, 위치만 보고는 절대 가를 수 없다.
+ *
+ * 그래서 **아는 시군구 이름 중 가장 긴 것부터** 맞춰 본다.
+ * 맞은 다음 토큰이 법정동이고, 그 뒤(리)는 버린다 —
+ * 국토부 API 도 법정동으로 읍·면까지만 준다.
+ *
+ * @param isKnownSigungu regions 테이블이 아는 이름인지 판별 (DB 를 여기서 읽지 않으려고 주입받는다)
+ * @returns 아는 시군구가 없으면 null
  */
-export function splitSigunguAndDong(full: string): {
-  sigunguName: string;
-  legalDongName: string;
-} {
-  const tokens = full.trim().split(/\s+/).filter((token) => token !== '');
-  if (tokens.length <= 1) return { sigunguName: tokens.join(' '), legalDongName: '' };
-  return {
-    sigunguName: tokens.slice(0, -1).join(' '),
-    legalDongName: tokens[tokens.length - 1]!,
-  };
+export function splitRegionText(
+  regionText: string,
+  isKnownSigungu: (name: string) => boolean,
+): { sigunguName: string; legalDongName: string } | null {
+  const tokens = regionText.trim().split(/\s+/).filter((token) => token !== '');
+
+  // 법정동이 될 토큰을 최소 하나는 남겨 둔다
+  for (let take = Math.min(tokens.length - 1, MAX_SIGUNGU_TOKENS); take >= 1; take -= 1) {
+    const name = tokens.slice(0, take).join(' ');
+    if (isKnownSigungu(name)) return { sigunguName: name, legalDongName: tokens[take]! };
+  }
+  return null;
 }
 
 /**
- * CSV 는 시군구를 **이름**으로만 준다 ("서울특별시 강남구").
- * 코드로 바꾸려면 regions 테이블이 필요한데 그건 DB 일이라 여기서 하지 않는다.
- * 그래서 `RawTrade` 대신 이름을 든 채로 내보내고, 코드 변환은 부르는 쪽이 한다.
+ * CSV 는 지역을 **이름 한 덩어리**로만 준다 ("서울특별시 강남구 역삼동").
+ * 시군구 코드로 바꾸는 것도, 어디까지가 시군구인지 가르는 것도 regions 테이블이 있어야 한다.
+ * 그건 DB 일이라 여기서 하지 않는다 — 원문을 그대로 들고 나가고, 해석은 부르는 쪽이 한다.
  */
-export type CsvTrade = Omit<RawTrade, 'sigunguCode'> & { sigunguName: string };
-export type CsvRent = Omit<RawRent, 'sigunguCode'> & { sigunguName: string };
+export type CsvTrade = Omit<RawTrade, 'sigunguCode' | 'legalDongName'> & { regionText: string };
+export type CsvRent = Omit<RawRent, 'sigunguCode' | 'legalDongName'> & { regionText: string };
 
 export interface CsvParseResult<T> {
   items: T[];
@@ -193,11 +211,8 @@ export function parseTradeCsv(csv: string): CsvParseResult<CsvTrade> {
       continue;
     }
 
-    const { sigunguName, legalDongName } = splitSigunguAndDong(text(cells, iSigungu));
-
     items.push({
-      sigunguName,
-      legalDongName,
+      regionText: text(cells, iSigungu),
       apartmentName,
       exclusiveSqm: num(cells, iSqm),
       priceManwon: num(cells, iPrice),
@@ -239,11 +254,8 @@ export function parseRentCsv(csv: string): CsvParseResult<CsvRent> {
       continue;
     }
 
-    const { sigunguName, legalDongName } = splitSigunguAndDong(text(cells, iSigungu));
-
     items.push({
-      sigunguName,
-      legalDongName,
+      regionText: text(cells, iSigungu),
       apartmentName,
       exclusiveSqm: num(cells, iSqm),
       depositManwon: num(cells, iDeposit),

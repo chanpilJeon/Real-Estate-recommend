@@ -35,6 +35,7 @@ import {
   detectCsvKind,
   parseRentCsv,
   parseTradeCsv,
+  splitRegionText,
   type CsvRent,
   type CsvTrade,
 } from '../apps/api/src/external/domain/molit-csv-parser';
@@ -56,7 +57,7 @@ import { decodeKoreanCsv } from './lib/decode-korean-csv';
 
 const DEFAULT_DIR = 'data/csv';
 /** 카카오 지오코딩 동시 요청 수. 너무 올리면 429 가 난다 */
-const GEOCODE_CONCURRENCY = 4;
+const GEOCODE_CONCURRENCY = 8;
 
 const logger: ILogger = {
   info: (ctx, msg) => console.log(`  [${ctx}] ${msg}`),
@@ -165,34 +166,46 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // ── 2. 시군구 이름 → 코드 ───────────────────────────────────────
+  // ── 2. 지역 이름 → 시군구 코드 + 법정동 ─────────────────────────
   const sigunguByName = await loadSigunguIndex(prisma);
+  const isKnownSigungu = (name: string): boolean => sigunguByName.has(name);
   const unresolved = new Set<string>();
 
   const rawTrades: RawTrade[] = [];
   for (const row of csvTrades) {
-    const code = sigunguByName.get(row.sigunguName);
-    if (code === undefined) {
-      unresolved.add(row.sigunguName);
+    const place = splitRegionText(row.regionText, isKnownSigungu);
+    if (place === null) {
+      unresolved.add(row.regionText);
       continue;
     }
-    const { sigunguName: _drop, ...rest } = row;
-    rawTrades.push({ ...rest, sigunguCode: code });
+    const { regionText: _drop, ...rest } = row;
+    rawTrades.push({
+      ...rest,
+      sigunguCode: sigunguByName.get(place.sigunguName)!,
+      legalDongName: place.legalDongName,
+    });
   }
 
   const rawRents: RawRent[] = [];
   for (const row of csvRents) {
-    const code = sigunguByName.get(row.sigunguName);
-    if (code === undefined) {
-      unresolved.add(row.sigunguName);
+    const place = splitRegionText(row.regionText, isKnownSigungu);
+    if (place === null) {
+      unresolved.add(row.regionText);
       continue;
     }
-    const { sigunguName: _drop, ...rest } = row;
-    rawRents.push({ ...rest, sigunguCode: code });
+    const { regionText: _drop, ...rest } = row;
+    rawRents.push({
+      ...rest,
+      sigunguCode: sigunguByName.get(place.sigunguName)!,
+      legalDongName: place.legalDongName,
+    });
   }
 
   if (unresolved.size > 0) {
-    console.log(`\n  ⚠ 지역을 찾지 못해 건너뛴 시군구: ${[...unresolved].join(', ')}`);
+    // 수백 곳을 한 줄에 늘어놓으면 읽을 수가 없다 — 몇 곳만 보이고 수로 말한다
+    const sample = [...unresolved].slice(0, 8).join(', ');
+    const more = unresolved.size > 8 ? ` 외 ${unresolved.size - 8}곳` : '';
+    console.log(`\n  ⚠ 지역을 찾지 못해 건너뛴 곳 ${unresolved.size}개: ${sample}${more}`);
     console.log('    법정동 코드가 없는 지역입니다. `pnpm seed:region` 을 먼저 돌려 보세요.');
   }
 
@@ -243,6 +256,12 @@ async function main(): Promise<void> {
   // (kaptCode 가 없으면 지역+정규화명+건축년도로 동일 단지를 찾아 update 한다).
   const complexInputs = await buildComplexInputs(csvTrades, csvRents, sigunguByName, regions);
   console.log(`\n■ 단지 만들기 — ${complexInputs.length}곳`);
+
+  // 이미 좌표를 아는 단지는 그 값을 그대로 옮겨 담는다.
+  // 재조회를 아끼려는 것만이 아니다 — 이걸 빼먹으면 upsert 가 lat/lng 를 null 로
+  // **덮어써서 지운다.** 두 번째 실행부터 지도에서 단지가 사라지는 버그가 된다.
+  const reused = await reuseKnownCoordinates(prisma, complexInputs);
+  if (reused > 0) console.log(`  이미 좌표를 아는 단지 ${reused}곳은 그대로 씁니다.`);
 
   if (args.geocode && config.kakaoRestKey !== '') {
     const geocoder = new KakaoGeocodeClient(config, quota);
@@ -337,16 +356,18 @@ async function buildComplexInputs(
   sigunguByName: Map<string, string>,
   regions: RegionSearchService,
 ): Promise<ComplexUpsertInput[]> {
+  const isKnownSigungu = (name: string): boolean => sigunguByName.has(name);
   const dongCache = new Map<string, string | null>();
   const seeds = new Map<string, ComplexSeed>();
 
   for (const row of [...csvTrades, ...csvRents]) {
-    const sigunguCode = sigunguByName.get(row.sigunguName);
-    if (sigunguCode === undefined) continue;
+    const place = splitRegionText(row.regionText, isKnownSigungu);
+    if (place === null) continue;
+    const sigunguCode = sigunguByName.get(place.sigunguName)!;
 
-    const dongKey = `${sigunguCode}|${row.legalDongName}`;
+    const dongKey = `${sigunguCode}|${place.legalDongName}`;
     if (!dongCache.has(dongKey)) {
-      const resolved = await regions.resolveDongCode(sigunguCode, row.legalDongName);
+      const resolved = await regions.resolveDongCode(sigunguCode, place.legalDongName);
       dongCache.set(dongKey, resolved?.toString() ?? null);
     }
     const regionCode = dongCache.get(dongKey);
@@ -359,7 +380,8 @@ async function buildComplexInputs(
       seed = {
         regionCode,
         name: row.apartmentName,
-        address: `${row.sigunguName} ${row.legalDongName}${jibun}`.trim(),
+        // 주소는 원문(리 포함)을 그대로 쓴다 — 지오코딩 정확도가 올라간다
+        address: `${row.regionText}${jibun}`.trim(),
         years: new Map(),
       };
       seeds.set(key, seed);
@@ -398,19 +420,58 @@ function mostCommon(years: Map<number, number>): number | null {
   return best;
 }
 
+/**
+ * 이미 DB 에 좌표가 있는 단지의 값을 입력에 옮겨 담는다.
+ * 옮기지 않으면 upsert 가 lat/lng 를 null 로 덮어써 **기존 좌표를 지운다.**
+ */
+async function reuseKnownCoordinates(
+  prisma: PrismaClient,
+  inputs: ComplexUpsertInput[],
+): Promise<number> {
+  const rows = await prisma.complex.findMany({
+    where: { lat: { not: null }, lng: { not: null } },
+    select: { regionCode: true, nameNormalized: true, lat: true, lng: true },
+  });
+
+  const known = new Map<string, { lat: number; lng: number }>();
+  for (const row of rows) {
+    known.set(`${row.regionCode}|${row.nameNormalized}`, {
+      lat: Number(row.lat),
+      lng: Number(row.lng),
+    });
+  }
+
+  let reused = 0;
+  for (const input of inputs) {
+    const hit = known.get(`${input.regionCode}|${normalizeComplexName(input.name)}`);
+    if (hit === undefined) continue;
+    input.lat = hit.lat;
+    input.lng = hit.lng;
+    reused += 1;
+  }
+  return reused;
+}
+
 /** 주소 → 좌표. 실패해도 단지는 저장한다 (지도에만 안 찍힌다) */
 async function geocodeAll(
   inputs: ComplexUpsertInput[],
   geocoder: KakaoGeocodeClient,
 ): Promise<void> {
+  const todo = inputs.filter((input) => input.lat === null);
+  if (todo.length === 0) {
+    console.log('  좌표를 새로 조회할 단지가 없습니다.');
+    return;
+  }
+  console.log(`  좌표 조회 시작 — ${todo.length}곳 (건당 약 0.1초)`);
+
   let done = 0;
   let found = 0;
   // 실패를 조용히 삼키면 "왜 지도에 안 찍히지"로 헤매게 된다. 첫 오류는 그대로 보여 준다.
   let failed = 0;
   let firstError: string | null = null;
 
-  for (let offset = 0; offset < inputs.length; offset += GEOCODE_CONCURRENCY) {
-    const chunk = inputs.slice(offset, offset + GEOCODE_CONCURRENCY);
+  for (let offset = 0; offset < todo.length; offset += GEOCODE_CONCURRENCY) {
+    const chunk = todo.slice(offset, offset + GEOCODE_CONCURRENCY);
 
     await Promise.all(
       chunk.map(async (input) => {
@@ -429,8 +490,8 @@ async function geocodeAll(
       }),
     );
 
-    if (done % 40 === 0 || done === inputs.length) {
-      process.stdout.write(`\r  좌표 조회 ${done}/${inputs.length} (찾음 ${found})`);
+    if (done % 200 === 0 || done === todo.length) {
+      process.stdout.write(`\r  좌표 조회 ${done}/${todo.length} (찾음 ${found})`);
     }
   }
   process.stdout.write('\n');
@@ -439,8 +500,8 @@ async function geocodeAll(
     console.log(`  ⚠ ${failed}곳은 조회 중 오류가 났습니다 — 지도에만 안 찍히고 검색·시세는 됩니다.`);
     console.log(`    첫 오류: ${firstError}`);
   }
-  if (found < inputs.length - failed) {
-    console.log(`  ⓘ ${inputs.length - failed - found}곳은 주소로 좌표를 찾지 못했습니다 (번지가 없거나 폐지된 주소).`);
+  if (found < todo.length - failed) {
+    console.log(`  ⓘ ${todo.length - failed - found}곳은 주소로 좌표를 찾지 못했습니다 (번지가 없거나 폐지된 주소).`);
   }
 }
 
