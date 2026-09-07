@@ -85,6 +85,32 @@ pnpm dev             # web(3000) + api(4000) 동시 기동
 | http://localhost:4000/api/health | API 상태 확인 |
 | http://localhost:3000/admin | 관리자 대시보드 (Step 9 예정) |
 
+### 데이터 수집
+
+평소에는 매일 06:00 에 자동으로 돌지만, 컴퓨터가 꺼져 있으면 그 시간에 돌지 않습니다.
+손으로 돌리려면:
+
+```bash
+pnpm collect
+```
+
+지역·기간을 지정할 수도 있습니다.
+
+```bash
+# 특정 지역만 (시군구 코드 5자리)
+pnpm collect --regions 11680,41450
+
+# 과거 데이터 채우기 (3년치)
+pnpm collect --regions 11680 --from 202301 --to 202609
+```
+
+수집할 지역은 `.env` 의 `COLLECT_SIGUNGU_CODES` 에 미리 적어둘 수 있습니다.
+전국을 매일 훑으면 공공 API 하루 한도를 넘기므로, **관심 지역만** 적습니다.
+
+> **데모 모드에서는 강남구(11680)·하남시(41450) 두 곳만 데이터가 있습니다.**
+> 다른 지역의 실제 데이터를 받으려면 공공데이터포털 API 키가 필요합니다 —
+> [docs/API-VERIFICATION.md](docs/API-VERIFICATION.md) 참조.
+
 ### 자주 쓰는 명령
 
 ```bash
