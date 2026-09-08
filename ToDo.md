@@ -1362,7 +1362,7 @@ main().finally(() => prisma.$disconnect());
 - [x] 단위 테스트: 이상치 제외 중위가 계산
 
 **4-D. `poi`** *(Step 5 이후로 미뤄도 무방 — 추천 단계에서 필요)*
-- [ ] POI 수집 + `DistanceCalculator.precomputeForRegion()`
+- [x] POI 수집 + `DistanceCalculator.precomputeForRegion()` — `pnpm collect:poi`; 반경 3km의 확인된 역·초등학교, 직선거리 표시. 수집 실패 시 기존 캐시 유지.
 
 ---
 

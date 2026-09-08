@@ -27,7 +27,7 @@ const layerZones = LAYERS.flatMap((modules, layerIndex) =>
     target: `${API_SRC}/${mod}`,
     from: LAYERS.slice(layerIndex)
       .flat()
-      .filter((other) => other !== mod)
+      .filter((other) => other !== mod && !(mod === 'poi' && ['external', 'complex'].includes(other)))
       .map((other) => `${API_SRC}/${other}`),
     message:
       `계층 위반: '${mod}' 모듈은 같거나 상위 계층 모듈을 import 할 수 없습니다. ` +

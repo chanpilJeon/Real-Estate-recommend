@@ -24,7 +24,8 @@
     "collect": "tsx --tsconfig apps/api/tsconfig.json scripts/collect.ts",
     "load-csv": "tsx --tsconfig apps/api/tsconfig.json scripts/load-csv.ts",
     "backfill-jibun": "tsx --tsconfig apps/api/tsconfig.json scripts/backfill-jibun.ts",
-    "fix-duplicates": "tsx --tsconfig apps/api/tsconfig.json scripts/fix-duplicate-complexes.ts"
+    "fix-duplicates": "tsx --tsconfig apps/api/tsconfig.json scripts/fix-duplicate-complexes.ts",
+    "collect:poi": "tsx --tsconfig apps/api/tsconfig.json scripts/collect-poi.ts"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",

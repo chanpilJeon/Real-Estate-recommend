@@ -110,5 +110,5 @@ export function formatManwon(manwon: number | null): string {
 /** 미터 → "도보 5분" (80m/분) */
 export function formatWalk(meters: number | null): string | null {
   if (meters === null) return null;
-  return `도보 ${Math.max(1, Math.ceil(meters / 80))}분`;
+  return `직선 ${meters.toLocaleString()}m`;
 }
