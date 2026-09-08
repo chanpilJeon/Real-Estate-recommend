@@ -102,6 +102,9 @@ function buildDeps(overrides: Partial<CollectorDeps> = {}): {
     } as unknown as CollectorDeps['matcher'],
     regions: {
       resolveDongCode: (_sgg: string, _dong: string) => Promise.resolve(RegionCode.parse('1168010100')),
+      // 실거래에서 단지를 만들 때 주소를 붙이려고 부른다
+      findByCode: (_code: string) =>
+        Promise.resolve({ fullName: () => '서울특별시 강남구 역삼동' }),
     } as unknown as CollectorDeps['regions'],
     recorder: {
       run: (name: string, fn: (ctx: unknown) => Promise<unknown>, options?: { triggeredBy?: string }) => {
@@ -144,9 +147,33 @@ describe('CollectionOrchestrator — 수집 오케스트레이션', () => {
       expect(spies.tradesInserted).toContain('래미안역삼');
     });
 
-    it('단지 마스터를 먼저 맞춘다 (매칭할 후보가 있어야 거래가 붙는다)', async () => {
+    it('실거래에 나온 단지를 마스터에 만든다 (K-apt 목록이 아니라 실거래가 기준)', async () => {
+      // 두 API 가 같은 단지를 다른 이름으로 부르기 때문에 K-apt 만 믿으면 거래가 붙지 못한다.
       const { orchestrator } = make();
-      expect((await orchestrator.runDailyIncremental([강남구])).complexesInserted).toBe(1);
+      expect((await orchestrator.runDailyIncremental([강남구])).complexesInserted).toBeGreaterThan(0);
+    });
+
+    it('K-apt 는 이미 있는 단지만 보강한다 — 거래 없는 단지를 만들지 않는다', async () => {
+      // 만들었다면 같은 아파트가 이름만 다르게 목록에 두 번 나온다.
+      const calls: (boolean | undefined)[] = [];
+      const { orchestrator } = make({
+        complexes: {
+          findById: () => Promise.resolve(null),
+          findByRegion: () => Promise.resolve([]),
+          findByRegionPrefix: () => Promise.resolve([]),
+          upsertMany: (items, options) => {
+            calls.push(options?.createMissing);
+            return Promise.resolve({ inserted: items.length, updated: 0, skipped: 0 });
+          },
+          updateNearestPoi: () => Promise.resolve(),
+          countAll: () => Promise.resolve(0),
+        },
+      });
+      await orchestrator.runDailyIncremental([강남구]);
+
+      // 실거래 적재는 생성 허용(기본값), K-apt 보강은 생성 금지
+      expect(calls).toContain(false);
+      expect(calls.filter((c) => c !== false).length).toBeGreaterThan(0);
     });
 
     it('JobRunRecorder 로 감싸 실행한다 (기록 없는 배치를 만들지 않는다)', async () => {
@@ -325,7 +352,8 @@ describe('CollectionOrchestrator — 수집 오케스트레이션', () => {
       const { orchestrator, spies } = make();
       await orchestrator.runDailyIncremental([강남구]);
 
-      // 배치 시작 1회 + 단지 동기화 후 1회
+      // 배치 시작 1회 + 실거래로 단지를 만든 뒤 매칭 직전 1회.
+      // 새로 만든 단지를 후보 목록이 모르면 방금 만든 단지에도 거래가 안 붙는다.
       expect(spies.resetCacheCalls).toBeGreaterThanOrEqual(2);
     });
   });

@@ -1,4 +1,4 @@
-import type { ComplexUpsertInput, IComplexRepository } from '../complex';
+import { normalizeComplexName, type ComplexUpsertInput, type IComplexRepository } from '../complex';
 import type { ILogger } from '../core';
 import type { IComplexInfoClient, IGeocodeClient, IMolitClient, RawTrade, RawRent } from '../external';
 import type { ComplexMatcher } from '../matching';
@@ -125,16 +125,29 @@ export class CollectionOrchestrator {
     report: CollectionReport,
     ctx: JobContext,
   ): Promise<void> {
-    // 1) 단지 마스터를 먼저 맞춰 둔다 — 매칭할 후보가 있어야 거래가 붙는다
-    await this.syncComplexes(sigunguCode, report, ctx);
-
-    // 2) 달마다 실거래·전월세를 받아 매칭 후 적재
+    // 1) 이 지역·기간의 원본을 먼저 다 받는다.
+    //    단지를 만들려면 어떤 단지가 거래됐는지 전부 알아야 하기 때문이다.
+    const fetched: { rawTrades: RawTrade[]; rawRents: RawRent[] }[] = [];
     for (const month of months) {
       const [rawTrades, rawRents] = await Promise.all([
         this.deps.molit.fetchTrades(sigunguCode, month.toString()),
         this.deps.molit.fetchRents(sigunguCode, month.toString()),
       ]);
+      fetched.push({ rawTrades, rawRents });
+    }
 
+    // 2) **실거래에 나온 단지를 마스터로 삼는다.**
+    //    K-apt 목록만 믿으면 두 API 의 단지명이 달라 거래가 붙지 못한다
+    //    (실거래 '한보미도맨션2' ↔ K-apt '대치미도맨션').
+    await this.seedComplexesFromTrades(sigunguCode, fetched, report);
+
+    // 3) K-apt 로 세대수·주차·난방을 덧씌운다. **없는 단지는 만들지 않는다** —
+    //    거래가 한 건도 없는 단지를 만들면 같은 아파트가 목록에 두 번 나온다.
+    await this.syncComplexes(sigunguCode, report, ctx);
+
+    // 4) 매칭 후 적재
+    this.deps.matcher.resetCache();
+    for (const { rawTrades, rawRents } of fetched) {
       const trades = await this.toTradeInputs(sigunguCode, rawTrades, report);
       const rents = await this.toRentInputs(sigunguCode, rawRents, report);
 
@@ -151,7 +164,108 @@ export class CollectionOrchestrator {
     }
   }
 
-  /** 공동주택 단지 목록·상세를 받아 마스터에 반영한다 */
+  /**
+   * 실거래·전월세에 나온 단지를 마스터에 반영한다.
+   *
+   * 실거래는 세대수·주차를 알려주지 않으므로 0(=모름)으로 둔다.
+   * `Complex.qualityScore()` 가 결측을 중립으로 다루므로 점수가 부당하게 깎이지 않고,
+   * K-apt 이름이 맞는 단지는 3) 에서 채워진다.
+   */
+  private async seedComplexesFromTrades(
+    sigunguCode: string,
+    fetched: { rawTrades: RawTrade[]; rawRents: RawRent[] }[],
+    report: CollectionReport,
+  ): Promise<void> {
+    const seeds = new Map<string, ComplexUpsertInput>();
+    // 법정동 이름은 같은 값이 수천 번 반복된다 — 한 번만 조회한다
+    const dongCache = new Map<string, { code: string; fullName: string } | null>();
+
+    for (const { rawTrades, rawRents } of fetched) {
+      for (const raw of [...rawTrades, ...rawRents]) {
+        const dong = await this.resolveDong(sigunguCode, raw.legalDongName, dongCache);
+        if (dong === null) continue;
+
+        const key = `${dong.code}|${normalizeComplexName(raw.apartmentName)}`;
+        if (seeds.has(key)) continue;
+
+        const jibun = raw.jibun === '' ? '' : ` ${raw.jibun}`;
+        seeds.set(key, {
+          kaptCode: null, // 실거래는 공동주택 코드를 주지 않는다
+          name: raw.apartmentName,
+          regionCode: dong.code,
+          address: `${dong.fullName}${jibun}`,
+          lat: null,
+          lng: null,
+          households: 0, // 모름 — qualityScore 가 결측을 중립으로 다룬다
+          buildingCount: 0,
+          approvalDate: null,
+          builtYear: raw.builtYear,
+          parkingCount: 0,
+          heatingType: null,
+        });
+      }
+    }
+
+    if (seeds.size === 0) return;
+
+    const inputs = [...seeds.values()];
+    await this.geocodeNewComplexes(sigunguCode, inputs);
+
+    const result = await this.deps.complexes.upsertMany(inputs);
+    report.complexesInserted += result.inserted;
+    report.complexesUpdated += result.updated;
+  }
+
+  /** 법정동 이름 → 코드와 전체 주소 ("서울특별시 강남구 역삼동"). 결과를 캐시한다 */
+  private async resolveDong(
+    sigunguCode: string,
+    dongName: string,
+    cache: Map<string, { code: string; fullName: string } | null>,
+  ): Promise<{ code: string; fullName: string } | null> {
+    const cached = cache.get(dongName);
+    if (cached !== undefined) return cached;
+
+    const code = await this.deps.regions.resolveDongCode(sigunguCode, dongName);
+    if (code === null) {
+      cache.set(dongName, null);
+      return null;
+    }
+
+    const region = await this.deps.regions.findByCode(code.toString());
+    const resolved = { code: code.toString(), fullName: region?.fullName() ?? dongName };
+    cache.set(dongName, resolved);
+    return resolved;
+  }
+
+  /** 아직 좌표를 모르는 단지만 조회한다 (이미 아는 곳까지 다시 물으면 한도가 빨리 닳는다) */
+  private async geocodeNewComplexes(
+    sigunguCode: string,
+    inputs: ComplexUpsertInput[],
+  ): Promise<void> {
+    const existing = await this.deps.complexes.findByRegionPrefix(sigunguCode);
+    const known = new Set(
+      existing
+        .filter((complex) => complex.coordinate !== null)
+        .map((complex) => `${complex.regionCode.toString()}|${complex.nameNormalized}`),
+    );
+
+    for (const input of inputs) {
+      if (known.has(`${input.regionCode}|${normalizeComplexName(input.name)}`)) continue;
+      // 좌표는 없어도 단지는 저장한다 — 지도에만 안 찍힐 뿐 검색·통계는 된다
+      const coordinate = await this.deps.geocode
+        .addressToCoordinate(input.address)
+        .catch(() => null);
+      if (coordinate !== null) {
+        input.lat = coordinate.lat;
+        input.lng = coordinate.lng;
+      }
+    }
+  }
+
+  /**
+   * 공동주택 단지 목록·상세로 **기존 단지를 보강한다.**
+   * 어떤 단지가 존재하는지는 실거래가 정하므로 여기서는 새로 만들지 않는다.
+   */
   private async syncComplexes(
     sigunguCode: string,
     report: CollectionReport,
@@ -190,13 +304,9 @@ export class CollectionOrchestrator {
       });
     }
 
-    const result = await this.deps.complexes.upsertMany(inputs);
-    report.complexesInserted += result.inserted;
+    const result = await this.deps.complexes.upsertMany(inputs, { createMissing: false });
     report.complexesUpdated += result.updated;
     ctx.addUpdated(result.updated);
-
-    // 단지가 새로 생겼으니 매칭 후보를 다시 읽어야 한다
-    this.deps.matcher.resetCache();
   }
 
   private async toTradeInputs(
