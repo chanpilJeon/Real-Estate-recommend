@@ -8,6 +8,8 @@ export interface ComplexUpsertInput {
   name: string;
   regionCode: string;
   address: string;
+  /** 정규화된 지번. 이름이 달라도 번지가 같으면 같은 단지로 본다 */
+  jibun: string | null;
   lat: number | null;
   lng: number | null;
   households: number;

@@ -26,3 +26,4 @@ export type {
 
 export { APP_NAME, PRESET_NAMES, PRESET_LABELS } from './constants';
 export type { PresetName } from './constants';
+export { jibunFromAddress, normalizeJibun } from './jibun';

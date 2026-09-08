@@ -107,6 +107,18 @@ pnpm collect --regions 11680 --from 202301 --to 202609
 수집할 지역은 `.env` 의 `COLLECT_SIGUNGU_CODES` 에 미리 적어둘 수 있습니다.
 전국을 매일 훑으면 공공 API 하루 한도를 넘기므로, **관심 지역만** 적습니다.
 
+**하루 한도에 걸릴 때**
+
+단지 정보(세대수·주차)는 단지당 2회 호출이라 한도가 가장 먼저 닳습니다.
+실거래만 먼저 다 채워 앱을 쓸 수 있게 하고, 단지 정보는 나눠 받으세요.
+
+```bash
+pnpm collect --from 202309 --no-complex-info   # 실거래만 (빠름)
+pnpm collect --from 202309                     # 나중에 단지 정보까지
+```
+
+이미 받아 둔 단지는 건너뛰므로 **그냥 다시 돌리면 이어집니다.**
+
 > **데모 모드에서는 강남구(11680)·하남시(41450) 두 곳만 데이터가 있습니다.**
 > 다른 지역의 실제 데이터를 받으려면 공공데이터포털 API 키가 필요합니다 —
 > [docs/API-VERIFICATION.md](docs/API-VERIFICATION.md) 참조.
@@ -168,6 +180,7 @@ pnpm load-csv --no-geocode           # 좌표 조회 건너뛰기 (빠르지만 
 
 ```bash
 pnpm load-csv      # 국토부에서 받은 CSV 를 DB 에 넣기
+pnpm backfill-jibun # 단지 지번을 주소에서 채우기 (K-apt 연결률을 올린다)
 pnpm test          # 단위 테스트 (DB 없이 동작)
 pnpm lint          # 린트 — 모듈 계층 위반도 여기서 잡힌다
 pnpm typecheck     # 타입 검사

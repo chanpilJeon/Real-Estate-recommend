@@ -20,7 +20,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 
-import { RegionCode } from '@apt/shared';
+import { RegionCode, normalizeJibun } from '@apt/shared';
 import { PrismaClient } from '@prisma/client';
 
 import { CollectionOrchestrator } from '../apps/api/src/collector/collection-orchestrator';
@@ -345,6 +345,8 @@ interface ComplexSeed {
   regionCode: string;
   name: string;
   address: string;
+  /** 이름이 K-apt 와 달라도 번지가 같으면 나중에 이어붙는다 */
+  jibun: string | null;
   /** 건축년도별 건수 — 가장 많이 나온 값을 쓴다 (동마다 다르게 적힌 경우가 있다) */
   years: Map<number, number>;
 }
@@ -382,6 +384,7 @@ async function buildComplexInputs(
         name: row.apartmentName,
         // 주소는 원문(리 포함)을 그대로 쓴다 — 지오코딩 정확도가 올라간다
         address: `${row.regionText}${jibun}`.trim(),
+        jibun: normalizeJibun(row.jibun),
         years: new Map(),
       };
       seeds.set(key, seed);
@@ -396,6 +399,7 @@ async function buildComplexInputs(
     name: seed.name,
     regionCode: seed.regionCode,
     address: seed.address,
+    jibun: seed.jibun,
     lat: null,
     lng: null,
     households: 0, // 모름 — qualityScore 가 결측을 중립으로 다룬다

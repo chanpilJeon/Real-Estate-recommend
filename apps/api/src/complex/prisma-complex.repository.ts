@@ -78,12 +78,22 @@ export class PrismaComplexRepository implements IComplexRepository {
         const data = this.toData(item);
         let existingId = await this.findExistingId(item, data.nameNormalized);
 
-        // 보강할 때는 건축년도를 빼고 한 번 더 찾는다.
-        // K-apt 는 '사용승인일'의 연도를, 실거래는 '건축년도'를 주는데 이 둘이 자주 1년씩 어긋난다.
-        // 그것 때문에 같은 단지를 못 찾으면 세대수·주차가 영영 안 채워진다.
-        // 단, 후보가 둘 이상이면 엉뚱한 단지에 정보를 씌울 수 있으므로 건드리지 않는다.
+        /*
+          보강(createMissing=false)일 때는 이름이 안 맞아도 포기하지 않는다.
+          실거래와 K-apt 는 같은 아파트를 다른 이름으로 부르기 때문이다
+          ('한보미도맨션2' ↔ '대치미도맨션'). 대신 번지로 찾는다 — 이름과 달리
+          번지는 사람이 붙이는 별칭이 아니라 주소라 양쪽이 같다.
+
+          그다음 건축년도만 뺀 이름 대조를 시도한다. K-apt 는 '사용승인일'의 연도를,
+          실거래는 '건축년도'를 주는데 자주 1년씩 어긋난다.
+
+          둘 다 **후보가 딱 하나일 때만** 인정한다. 여럿이면 어느 쪽인지 알 수 없고,
+          엉뚱한 단지에 세대수를 씌우면 추천이 조용히 틀어진다.
+        */
         if (existingId === null && !createMissing) {
-          existingId = await this.findOnlyByName(item.regionCode, data.nameNormalized);
+          existingId =
+            (await this.findOnlyByJibun(item.regionCode, item.jibun)) ??
+            (await this.findOnlyByName(item.regionCode, data.nameNormalized));
         }
 
         if (existingId === null) {
@@ -124,6 +134,7 @@ export class PrismaComplexRepository implements IComplexRepository {
       nameNormalized: normalizeComplexName(item.name),
       regionCode: item.regionCode,
       address: item.address,
+      jibun: item.jibun,
       lat: item.lat,
       lng: item.lng,
       households: item.households,
@@ -133,6 +144,18 @@ export class PrismaComplexRepository implements IComplexRepository {
       parkingCount: item.parkingCount,
       heatingType: item.heatingType,
     };
+  }
+
+  /** 지역 + 번지로 찾는다. 딱 하나일 때만 인정한다 */
+  private async findOnlyByJibun(regionCode: string, jibun: string | null): Promise<number | null> {
+    if (jibun === null || jibun === '') return null;
+
+    const rows = await this.prisma.complex.findMany({
+      where: { regionCode, jibun },
+      select: { id: true },
+      take: 2,
+    });
+    return rows.length === 1 ? rows[0]!.id : null;
   }
 
   /** 지역 + 정규화명으로만 찾는다. 딱 하나일 때만 인정한다 (여럿이면 어느 쪽인지 알 수 없다) */
@@ -183,6 +206,7 @@ function withoutUnknowns(
 
   // 0 은 "모름"을 뜻한다 — 세대가 0인 아파트는 없다
   if (data.kaptCode != null && data.kaptCode !== '') merged.kaptCode = data.kaptCode;
+  if (data.jibun != null && data.jibun !== '') merged.jibun = data.jibun;
   if (data.lat != null) merged.lat = data.lat;
   if (data.lng != null) merged.lng = data.lng;
   if (Number(data.households) > 0) merged.households = data.households;

@@ -1,3 +1,4 @@
+import { jibunFromAddress } from '@apt/shared';
 import { Injectable } from '@nestjs/common';
 
 import { AppConfig } from '../../core';
@@ -64,11 +65,14 @@ export class ComplexInfoHttpClient implements IComplexInfoClient {
 
     const name = str(basis, 'kaptName');
     const parking = isObject(detail) ? num(detail, 'kaptdPcnt') + num(detail, 'kaptdPcntu') : 0;
+    const jibunAddress = stripTrailingName(str(basis, 'kaptAddr'), name);
 
     return {
       kaptCode: str(basis, 'kaptCode') || kaptCode,
       name,
-      address: stripTrailingName(str(basis, 'kaptAddr'), name) || str(basis, 'doroJuso'),
+      address: jibunAddress || str(basis, 'doroJuso'),
+      // 이름이 실거래와 달라도 번지가 같으면 같은 단지다 — 이어붙이는 열쇠
+      jibun: jibunFromAddress(jibunAddress),
       households: num(basis, 'kaptdaCnt', 'hoCnt'),
       buildingCount: num(basis, 'kaptDongCnt'),
       approvalDate: parseUseDate(str(basis, 'kaptUsedate')),

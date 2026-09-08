@@ -1,3 +1,5 @@
+import { normalizeJibun } from '@apt/shared';
+
 import { normalizeComplexName, type ComplexUpsertInput, type IComplexRepository } from '../complex';
 import type { ILogger } from '../core';
 import type { IComplexInfoClient, IGeocodeClient, IMolitClient, RawTrade, RawRent } from '../external';
@@ -197,6 +199,8 @@ export class CollectionOrchestrator {
           name: raw.apartmentName,
           regionCode: dong.code,
           address: `${dong.fullName}${jibun}`,
+          // 이름이 K-apt 와 달라도 번지가 같으면 나중에 이어붙는다
+          jibun: normalizeJibun(raw.jibun),
           lat: null,
           lng: null,
           households: 0, // 모름 — qualityScore 가 결측을 중립으로 다룬다
@@ -320,6 +324,7 @@ export class CollectionOrchestrator {
         name: detail.name,
         regionCode: regionCode.toString(),
         address: detail.address,
+        jibun: detail.jibun,
         lat: coordinate?.lat ?? null,
         lng: coordinate?.lng ?? null,
         households: detail.households,

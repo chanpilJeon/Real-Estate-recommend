@@ -56,6 +56,8 @@ export interface RawComplexDetail {
   kaptCode: string;
   name: string;
   address: string;
+  /** 주소에서 떼어낸 지번. 도로명주소뿐이면 null */
+  jibun: string | null;
   households: number;
   buildingCount: number;
   /** 사용승인일 */

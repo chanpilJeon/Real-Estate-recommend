@@ -60,6 +60,8 @@ model Complex {
   nameNormalized String    @map("name_normalized") @db.VarChar(100) // 매칭용 정규화명
   regionCode     String    @map("region_code") @db.Char(10)
   address        String    @db.VarChar(200)
+  /// 정규화된 지번("761-10"). 실거래와 K-apt 를 이어붙이는 열쇠 — 이름은 서로 다르지만 번지는 같다
+  jibun          String?   @db.VarChar(20)
   lat            Decimal?  @db.Decimal(10, 7)
   lng            Decimal?  @db.Decimal(10, 7)
   households     Int       @default(0)
@@ -79,6 +81,7 @@ model Complex {
   rents     Rent[]
 
   @@unique([regionCode, nameNormalized, builtYear], name: "uk_complex_identity")
+  @@index([regionCode, jibun])
   @@index([regionCode])
   @@index([builtYear])
   @@index([households])

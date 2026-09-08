@@ -56,6 +56,7 @@ function buildDeps(overrides: Partial<CollectorDeps> = {}): {
           kaptCode,
           name: '래미안역삼',
           address: '서울 강남구 역삼동 736-1',
+          jibun: '736-1',
           households: 1284,
           buildingCount: 12,
           approvalDate: new Date('2005-11-30T00:00:00Z'),

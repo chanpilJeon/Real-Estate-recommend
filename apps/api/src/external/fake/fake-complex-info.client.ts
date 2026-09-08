@@ -1,3 +1,4 @@
+import { jibunFromAddress } from '@apt/shared';
 import { Injectable } from '@nestjs/common';
 
 import type { RawComplexDetail, RawComplexInfo } from '../domain/raw-types';
@@ -28,6 +29,7 @@ export class FakeComplexInfoClient implements IComplexInfoClient {
       kaptCode: complex.kaptCode,
       name: complex.name,
       address: complex.address,
+      jibun: jibunFromAddress(complex.address),
       households: complex.households,
       buildingCount: complex.buildingCount,
       approvalDate: new Date(`${complex.approvalDate}T00:00:00Z`),
