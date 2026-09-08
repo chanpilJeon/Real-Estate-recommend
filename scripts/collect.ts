@@ -46,6 +46,8 @@ interface Args {
   regions: string[] | null;
   from: YearMonth | null;
   to: YearMonth | null;
+  /** 단지 정보(K-apt) 보강을 건너뛴다 — 실거래만 빨리 채우고 싶을 때 */
+  skipComplexInfo: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -65,8 +67,21 @@ function parseArgs(argv: string[]): Args {
         : regionsRaw.split(',').map((c) => c.trim()).filter((c) => c !== ''),
     from: fromRaw === null ? null : YearMonth.parse(fromRaw),
     to: toRaw === null ? null : YearMonth.parse(toRaw),
+    skipComplexInfo: argv.includes('--no-complex-info'),
   };
 }
+
+/**
+ * 단지 정보(K-apt) 를 받지 않는 자리끼움.
+ *
+ * 단지 상세는 단지당 2회 호출이라 하루 한도(5,000)가 가장 먼저 닳는다.
+ * 실거래만 먼저 다 채워 앱을 쓸 수 있게 하고, 세대수·주차는 며칠에 걸쳐
+ * 나눠 받는 편이 낫다. 이미 보강한 단지는 다시 받지 않으므로 그냥 다시 돌리면 이어진다.
+ */
+const NO_COMPLEX_INFO = {
+  fetchComplexList: () => Promise.resolve([]),
+  fetchComplexDetail: () => Promise.resolve(null),
+};
 
 /** 진행 상황을 보여주는 콘솔 로거 */
 const logger: ILogger = {
@@ -112,9 +127,11 @@ async function main(): Promise<void> {
 
   const orchestrator = new CollectionOrchestrator({
     molit: config.demoMode ? new FakeMolitClient() : new MolitHttpClient(config, quota, logger),
-    complexInfo: config.demoMode
-      ? new FakeComplexInfoClient()
-      : new ComplexInfoHttpClient(config, quota),
+    complexInfo: args.skipComplexInfo
+      ? NO_COMPLEX_INFO
+      : config.demoMode
+        ? new FakeComplexInfoClient()
+        : new ComplexInfoHttpClient(config, quota),
     geocode: config.demoMode ? new FakeGeocodeClient() : new KakaoGeocodeClient(config, quota),
     complexes,
     trades,
@@ -127,7 +144,10 @@ async function main(): Promise<void> {
 
   const mode = config.demoMode ? '데모 (샘플 데이터)' : '실제 공공 API';
   console.log(`\n■ 수집 시작 — ${mode}`);
-  console.log(`  지역: ${regions.join(', ')}`);
+  console.log(`  지역: ${regions.length}곳`);
+  if (args.skipComplexInfo) {
+    console.log('  ⓘ 단지 정보(세대수·주차) 보강은 건너뜁니다 — 나중에 --no-complex-info 없이 다시 돌리면 이어집니다.');
+  }
 
   const report =
     args.from === null

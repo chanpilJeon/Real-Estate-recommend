@@ -160,7 +160,11 @@ describe('CollectionOrchestrator — 수집 오케스트레이션', () => {
         complexes: {
           findById: () => Promise.resolve(null),
           findByRegion: () => Promise.resolve([]),
-          findByRegionPrefix: () => Promise.resolve([]),
+          // 실거래로 만들어져 세대수를 아직 모르는 단지 — 보강 대상이다
+          findByRegionPrefix: () =>
+            Promise.resolve([
+              { nameNormalized: '래미안역삼', households: 0, coordinate: null, regionCode: RegionCode.parse('1168010100') },
+            ] as unknown as Awaited<ReturnType<CollectorDeps['complexes']['findByRegionPrefix']>>),
           upsertMany: (items, options) => {
             calls.push(options?.createMissing);
             return Promise.resolve({ inserted: items.length, updated: 0, skipped: 0 });
@@ -174,6 +178,37 @@ describe('CollectionOrchestrator — 수집 오케스트레이션', () => {
       // 실거래 적재는 생성 허용(기본값), K-apt 보강은 생성 금지
       expect(calls).toContain(false);
       expect(calls.filter((c) => c !== false).length).toBeGreaterThan(0);
+    });
+
+    it('보강이 필요 없는 단지는 상세를 받지 않는다 (한도가 가장 먼저 닳는 곳)', async () => {
+      let detailCalls = 0;
+      const { orchestrator } = make({
+        complexInfo: {
+          fetchComplexList: (sigunguCode: string) =>
+            Promise.resolve([
+              { kaptCode: `K-${sigunguCode}`, name: '래미안역삼', sido: '서울', sigungu: '강남구', dong: '역삼동' },
+            ]),
+          fetchComplexDetail: () => {
+            detailCalls += 1;
+            return Promise.resolve(null);
+          },
+        },
+        complexes: {
+          findById: () => Promise.resolve(null),
+          findByRegion: () => Promise.resolve([]),
+          // 이미 세대수를 아는 단지뿐이다
+          findByRegionPrefix: () =>
+            Promise.resolve([
+              { nameNormalized: '래미안역삼', households: 1284, coordinate: null, regionCode: RegionCode.parse('1168010100') },
+            ] as unknown as Awaited<ReturnType<CollectorDeps['complexes']['findByRegionPrefix']>>),
+          upsertMany: (items) => Promise.resolve({ inserted: items.length, updated: 0, skipped: 0 }),
+          updateNearestPoi: () => Promise.resolve(),
+          countAll: () => Promise.resolve(0),
+        },
+      });
+      await orchestrator.runDailyIncremental([강남구]);
+
+      expect(detailCalls).toBe(0);
     });
 
     it('JobRunRecorder 로 감싸 실행한다 (기록 없는 배치를 만들지 않는다)', async () => {

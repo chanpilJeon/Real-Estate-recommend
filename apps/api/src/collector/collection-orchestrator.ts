@@ -14,6 +14,9 @@ const CTX = 'collector';
 /** 매일 수집하는 증분 구간. 실거래는 계약 후 30일 내 신고라 지난달까지 다시 훑는다 */
 export const INCREMENTAL_MONTHS = 2;
 
+/** 카카오 지오코딩 동시 요청 수. 너무 올리면 429 가 난다 */
+const GEOCODE_CONCURRENCY = 8;
+
 export const JOB_DAILY = 'daily-collect';
 export const JOB_BACKFILL = 'backfill-collect';
 
@@ -249,16 +252,24 @@ export class CollectionOrchestrator {
         .map((complex) => `${complex.regionCode.toString()}|${complex.nameNormalized}`),
     );
 
-    for (const input of inputs) {
-      if (known.has(`${input.regionCode}|${normalizeComplexName(input.name)}`)) continue;
-      // 좌표는 없어도 단지는 저장한다 — 지도에만 안 찍힐 뿐 검색·통계는 된다
-      const coordinate = await this.deps.geocode
-        .addressToCoordinate(input.address)
-        .catch(() => null);
-      if (coordinate !== null) {
-        input.lat = coordinate.lat;
-        input.lng = coordinate.lng;
-      }
+    const todo = inputs.filter(
+      (input) => !known.has(`${input.regionCode}|${normalizeComplexName(input.name)}`),
+    );
+
+    // 한 건씩 순서대로 물으면 단지 만 곳에 30분이 걸린다. 조금씩 겹쳐 보낸다.
+    for (let offset = 0; offset < todo.length; offset += GEOCODE_CONCURRENCY) {
+      await Promise.all(
+        todo.slice(offset, offset + GEOCODE_CONCURRENCY).map(async (input) => {
+          // 좌표는 없어도 단지는 저장한다 — 지도에만 안 찍힐 뿐 검색·통계는 된다
+          const coordinate = await this.deps.geocode
+            .addressToCoordinate(input.address)
+            .catch(() => null);
+          if (coordinate !== null) {
+            input.lat = coordinate.lat;
+            input.lng = coordinate.lng;
+          }
+        }),
+      );
     }
   }
 
@@ -274,8 +285,24 @@ export class CollectionOrchestrator {
     const list = await this.deps.complexInfo.fetchComplexList(sigunguCode);
     if (list.length === 0) return;
 
+    /*
+      단지 상세는 **단지당 2회**(기본정보+상세정보) 호출한다. 공공 API 하루 한도가
+      가장 먼저 닳는 곳이라, 받아 봐야 소용없는 것을 미리 걸러 낸다.
+
+      ① 실거래에 나오지 않은 단지 — 우리 목록에 없으니 보강 대상이 아니다.
+         (K-apt 목록의 절반 이상이 여기 해당한다. 이름이 달라 못 붙는 것 포함)
+      ② 이미 세대수를 아는 단지 — 세대수·주차는 거의 변하지 않으니 다시 받지 않는다.
+    */
+    const existing = await this.deps.complexes.findByRegionPrefix(sigunguCode);
+    const needsEnrichment = new Set(
+      existing.filter((c) => c.households <= 0).map((c) => c.nameNormalized),
+    );
+    if (needsEnrichment.size === 0) return;
+
     const inputs: ComplexUpsertInput[] = [];
     for (const summary of list) {
+      if (!needsEnrichment.has(normalizeComplexName(summary.name))) continue;
+
       const detail = await this.deps.complexInfo.fetchComplexDetail(summary.kaptCode);
       if (detail === null) continue;
 
