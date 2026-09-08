@@ -121,7 +121,8 @@ export class SearchController {
     if (sqm === undefined) throw new BadRequestException('추이를 볼 전용면적을 선택하세요.');
     const area = this.toArea(sqm);
     const [trend, jeonseRatio] = await Promise.all([
-      this.tradeStats.priceTrend(id, area), this.tradeStats.jeonseRatio(id, area),
+      this.tradeStats.priceTrend(id, area),
+      this.tradeStats.jeonseRatio(id, area),
     ]);
     return { trend, jeonseRatio };
   }

@@ -3,7 +3,12 @@ import { Injectable } from '@nestjs/common';
 
 import { AppConfig } from '../../core';
 import { ApiQuotaTracker } from '../../observability';
-import { KakaoApiError, parseAddressSearch, parsePlaceSearch, translateKakaoError } from '../domain/kakao-parser';
+import {
+  KakaoApiError,
+  parseAddressSearch,
+  parsePlaceSearch,
+  translateKakaoError,
+} from '../domain/kakao-parser';
 import type { RawPlace } from '../domain/raw-types';
 import type { IGeocodeClient, PlaceCategory } from '../ports';
 
@@ -29,23 +34,37 @@ export class KakaoGeocodeClient implements IGeocodeClient {
   ) {}
 
   async addressToCoordinate(address: string): Promise<Coordinate | null> {
-    const body = await this.request(`${ADDRESS_URL}?${new URLSearchParams({ query: address }).toString()}`);
+    const body = await this.request(
+      `${ADDRESS_URL}?${new URLSearchParams({ query: address }).toString()}`,
+    );
     return parseAddressSearch(body);
   }
 
-  async searchPlaces(category: PlaceCategory, center: Coordinate, radiusM: number): Promise<RawPlace[]> {
-    const body = await this.request(
-      `${CATEGORY_URL}?${new URLSearchParams({
-        category_group_code: category,
-        // 카카오는 x=경도, y=위도 순서다
-        x: String(center.lng),
-        y: String(center.lat),
-        radius: String(Math.min(Math.max(radiusM, 0), 20_000)), // 카카오 상한 20km
-        size: String(MAX_PLACES),
-        sort: 'distance',
-      }).toString()}`,
-    );
-    return parsePlaceSearch(body, category);
+  async searchPlaces(
+    category: PlaceCategory,
+    center: Coordinate,
+    radiusM: number,
+  ): Promise<RawPlace[]> {
+    const places: RawPlace[] = [];
+    // 공식 문서: page 1~45, size 최대 15. 첫 페이지의 중·고교 뒤에 초등학교가 올 수 있다.
+    for (let page = 1; page <= 45; page++) {
+      const body = await this.request(
+        `${CATEGORY_URL}?${new URLSearchParams({
+          category_group_code: category,
+          x: String(center.lng),
+          y: String(center.lat),
+          radius: String(Math.min(Math.max(radiusM, 0), 20_000)),
+          size: String(MAX_PLACES),
+          sort: 'distance',
+          page: String(page),
+        }).toString()}`,
+      );
+      const result = parsePlaceSearch(body, category);
+      places.push(...result);
+      const meta = (body as { meta?: { is_end?: boolean } }).meta;
+      if (meta?.is_end !== false || result.length === 0) break;
+    }
+    return places;
   }
 
   private async request(url: string): Promise<unknown> {

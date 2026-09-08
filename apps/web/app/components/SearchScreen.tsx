@@ -1,6 +1,6 @@
 'use client';
 
-import type { ComplexSummaryDto, RegionCandidateDto } from '@apt/shared';
+import type { ComplexSummaryDto, RecommendationDto, RegionCandidateDto } from '@apt/shared';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -34,7 +34,7 @@ export function SearchScreen() {
   const params = useSearchParams();
 
   const [region, setRegion] = useState<RegionCandidateDto | null>(null);
-  const [items, setItems] = useState<ComplexSummaryDto[]>([]);
+  const [items, setItems] = useState<(ComplexSummaryDto | RecommendationDto)[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +42,8 @@ export function SearchScreen() {
   const [tab, setTab] = useState<MobileTab>('list');
 
   const regionCode = params.get('regionCode') ?? '';
+  const preset = params.get('preset') ?? '';
+  const page = Math.max(1, Math.floor(numParam(params, 'page') ?? 1));
 
   const conditions = useMemo<Conditions>(
     () => ({
@@ -58,8 +60,8 @@ export function SearchScreen() {
 
   /** URL 을 바꿔 검색을 다시 돌린다 */
   const updateUrl = useCallback(
-    (next: { regionCode?: string } & Partial<Conditions>) => {
-      const merged = { regionCode, ...conditions, ...next };
+    (next: { regionCode?: string; preset?: string; page?: number } & Partial<Conditions>) => {
+      const merged = { regionCode, preset, page: 1, ...conditions, ...next };
       const search = new URLSearchParams();
       for (const [key, value] of Object.entries(merged)) {
         if (value === undefined || value === null || value === '') continue;
@@ -67,14 +69,16 @@ export function SearchScreen() {
       }
       router.replace(`/?${search.toString()}`, { scroll: false });
     },
-    [conditions, regionCode, router],
+    [conditions, regionCode, preset, router],
   );
 
   // 링크로 들어온 경우 지역 이름을 채워 넣는다
   useEffect(() => {
     if (regionCode === '' || region?.code === regionCode) return;
     let alive = true;
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000'}/api/regions/${regionCode}`)
+    fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000'}/api/regions/${regionCode}`,
+    )
       .then((r) => (r.ok ? (r.json() as Promise<RegionCandidateDto>) : null))
       .then((found) => {
         if (alive && found !== null) setRegion(found);
@@ -99,8 +103,12 @@ export function SearchScreen() {
     setLoading(true);
     setError(null);
 
-    api
-      .searchComplexes({ regionCode, ...conditions, pageSize: 100 })
+    const request =
+      preset === ''
+        ? api.searchComplexes({ regionCode, ...conditions, page, pageSize: 100 })
+        : api.recommend({ regionCode, ...conditions, preset, page, pageSize: 100 });
+    setSelectedId(null);
+    request
       .then((result) => {
         if (!alive) return;
         setItems(result.items);
@@ -119,7 +127,7 @@ export function SearchScreen() {
     return () => {
       alive = false;
     };
-  }, [regionCode, conditions]);
+  }, [regionCode, conditions, preset, page]);
 
   const selectComplex = useCallback((complex: ComplexSummaryDto) => {
     setSelectedId(complex.id);
@@ -138,7 +146,38 @@ export function SearchScreen() {
           }}
         />
         <hr className="hairline" />
-        <ConditionPanel value={conditions} onChange={(next) => updateUrl(next)} />
+        <div className="stack stack--2">
+          <label className="field-label" htmlFor="recommend-preset">
+            추천 기준
+          </label>
+          <select
+            id="recommend-preset"
+            className="input"
+            value={preset}
+            onChange={(e) => updateUrl({ preset: e.target.value })}
+          >
+            <option value="">조건 검색</option>
+            <option value="value">가성비형</option>
+            <option value="location">입지우선형</option>
+            <option value="newbuild">신축선호형</option>
+          </select>
+          {preset !== '' && (
+            <p className="field-hint">
+              조건에 맞는 전체 단지를 점수순으로 추천합니다. 미확인 항목은 중립 점수입니다. 가격은
+              최근 6개월 실거래 기준이며 현재 호가와 다릅니다. 수집되지 않은 거래는 점수에 반영되지
+              않습니다.
+            </p>
+          )}
+          {preset !== '' && conditions.priceMax === undefined && (
+            <p className="field-hint">예산 상한을 입력하면 가격 여유도를 비교할 수 있습니다.</p>
+          )}
+        </div>
+        <hr className="hairline" />
+        <ConditionPanel
+          value={conditions}
+          onChange={(next) => updateUrl(next)}
+          recommendation={preset !== ''}
+        />
       </section>
 
       <section className={`search-results ${tab === 'map' ? 'search-results--hidden-mobile' : ''}`}>
@@ -156,7 +195,10 @@ export function SearchScreen() {
                 &lsquo;미사&rsquo; 같은 생활권 이름도 됩니다.
               </p>
             </div>
-            <CollectedRegionHint searched={false} onPick={(code) => updateUrl({ regionCode: code })} />
+            <CollectedRegionHint
+              searched={false}
+              onPick={(code) => updateUrl({ regionCode: code })}
+            />
           </div>
         ) : (
           <>
@@ -168,11 +210,29 @@ export function SearchScreen() {
               selectedId={selectedId}
               onSelect={selectComplex}
             />
+            {!loading && error === null && total > 100 && (
+              <nav className="pagination" aria-label="결과 페이지">
+                <button
+                  className="btn btn--ghost"
+                  disabled={page <= 1}
+                  onClick={() => updateUrl({ page: page - 1 })}
+                >
+                  이전
+                </button>
+                <span>
+                  {page} / {Math.ceil(total / 100)}
+                </span>
+                <button
+                  className="btn btn--ghost"
+                  disabled={page >= Math.ceil(total / 100)}
+                  onClick={() => updateUrl({ page: page + 1 })}
+                >
+                  다음
+                </button>
+              </nav>
+            )}
             {!loading && error === null && items.length === 0 && (
-              <CollectedRegionHint
-                searched
-                onPick={(code) => updateUrl({ regionCode: code })}
-              />
+              <CollectedRegionHint searched onPick={(code) => updateUrl({ regionCode: code })} />
             )}
           </>
         )}
@@ -183,7 +243,7 @@ export function SearchScreen() {
       </section>
 
       {/* 모바일에서만 보이는 목록/지도 전환 */}
-      <div className="mobile-tabs">
+      <div className="mobile-tabs" style={selectedId !== null ? { display: 'none' } : undefined}>
         <button
           type="button"
           className={`btn ${tab === 'list' ? 'btn--primary' : 'btn--ghost'}`}
@@ -201,7 +261,11 @@ export function SearchScreen() {
       </div>
 
       {selectedId !== null && (
-        <ComplexDetailPanel complexId={selectedId} onClose={() => setSelectedId(null)} />
+        <ComplexDetailPanel
+          key={selectedId}
+          complexId={selectedId}
+          onClose={() => setSelectedId(null)}
+        />
       )}
     </div>
   );

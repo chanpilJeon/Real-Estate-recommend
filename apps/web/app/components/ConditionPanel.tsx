@@ -12,6 +12,7 @@ export interface Conditions {
 
 interface Props {
   value: Conditions;
+  recommendation?: boolean;
   onChange: (next: Conditions) => void;
 }
 
@@ -33,7 +34,7 @@ const SORTS = [
   { value: 'quality', label: '단지 점수 순' },
 ];
 
-export function ConditionPanel({ value, onChange }: Props) {
+export function ConditionPanel({ value, onChange, recommendation = false }: Props) {
   const set = (patch: Partial<Conditions>) => onChange({ ...value, ...patch });
 
   const eokValue = (manwon: number | undefined): string =>
@@ -138,6 +139,7 @@ export function ConditionPanel({ value, onChange }: Props) {
           id="sort-select"
           className="input"
           value={value.sort}
+          disabled={recommendation}
           onChange={(e) => set({ sort: e.target.value })}
         >
           {SORTS.map((s) => (

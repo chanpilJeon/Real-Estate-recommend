@@ -54,10 +54,13 @@ export class ComplexSearchService {
     // 2) 중위가를 한 번에 구한다 (가격 계산은 trade 모듈만).
     //    면적 조건이 있으면 **그 면적대의** 중위가로 본다 — 안 그러면 작은 평형이 싸서
     //    예산에 걸린 단지가 "84㎡ 5억 이하" 검색 결과에 올라온다.
-    const medians = await this.tradeStats.medianPricesByComplex(candidates.map((c) => c.id), {
-      minSqm: condition.areaRange.min?.toSqm(),
-      maxSqm: condition.areaRange.max?.toSqm(),
-    });
+    const medians = await this.tradeStats.medianPricesByComplex(
+      candidates.map((c) => c.id),
+      {
+        minSqm: condition.areaRange.min?.toSqm(),
+        maxSqm: condition.areaRange.max?.toSqm(),
+      },
+    );
 
     // 3) 예산으로 거른다. 거래가 없어 중위가를 모르는 단지는
     //    예산 조건이 걸려 있으면 뺀다 — "예산에 맞는지 알 수 없음"을 맞는다고 보면 안 된다.

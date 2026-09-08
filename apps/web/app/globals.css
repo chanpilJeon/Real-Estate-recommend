@@ -1117,3 +1117,8 @@ svg {
 .report-panel { width: min(340px, calc(100vw - 48px)); padding: 16px; display: grid; gap: 12px; position: absolute; bottom: 44px; right: 0; }
 .report-panel textarea { width: 100%; background: var(--color-bg-tertiary); color: var(--color-text-primary); border: 1px solid var(--color-border-translucent-strong); border-radius: var(--radius-8); padding: 12px; font: inherit; }
 @media (max-width: 768px) { .problem-report { bottom: 76px; right: 16px; } }
+
+.recommendation-summary { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border-translucent-strong); display: grid; gap: 4px; }
+.recommendation-score { color: var(--color-accent-hover); font-size: var(--text-small); }
+.score-parts, .recommendation-reason { font-size: var(--text-micro); color: var(--color-text-tertiary); }
+.pagination { display: flex; justify-content: center; align-items: center; gap: 16px; padding: 16px; }

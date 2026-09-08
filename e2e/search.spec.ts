@@ -100,3 +100,16 @@ test('문제 신고는 조건을 담은 초안만 만든다', async ({ page }) =
   expect(decodeURIComponent(href!)).toContain('priceMax=100000');
   expect(href).not.toContain('private');
 });
+
+test('추천 프리셋과 예산을 새로고침 후에도 유지한다', async ({ page }) => {
+  await page.goto('/?regionCode=1168000000&priceMax=100000');
+  await page.getByLabel('추천 기준').selectOption('value');
+  await expect(page).toHaveURL(/preset=value/);
+  await expect(page.getByText('추천 72.0점')).toBeVisible();
+  await expect(page.getByText('예산 상한 대비 20% 여유')).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('추천 기준')).toHaveValue('value');
+  await expect(page).toHaveURL(/priceMax=100000/);
+  await page.getByLabel('추천 기준').selectOption('location');
+  await expect(page).toHaveURL(/preset=location/);
+});

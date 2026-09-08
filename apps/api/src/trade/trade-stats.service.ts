@@ -65,7 +65,10 @@ export class TradeStatsService {
   }
 
   /** 단지 전체(면적 무관) 중위가 — 목록 화면에서 대표값으로 쓴다 */
-  async medianPriceAllAreas(complexId: number, months = DEFAULT_MEDIAN_MONTHS): Promise<Money | null> {
+  async medianPriceAllAreas(
+    complexId: number,
+    months = DEFAULT_MEDIAN_MONTHS,
+  ): Promise<Money | null> {
     return this.cached(`medianAll:${complexId}:${months}`, async () => {
       const trades = await this.repository.findTrades({ complexId, since: this.monthsAgo(months) });
       const result = medianExcludingOutliers(trades.map((t) => t.price.toManwon()));
@@ -111,10 +114,14 @@ export class TradeStatsService {
 
   /** 추천의 유동성 지표. 후보 전체를 한 번 조회하며 취소 거래는 저장소에서 제외된다. */
   async annualTradeCounts(complexIds: number[]): Promise<Map<number, number>> {
-    const rows = await this.repository.findTradesForComplexes(complexIds, this.monthsAgo(LIQUIDITY_MONTHS));
+    const rows = await this.repository.findTradesForComplexes(
+      complexIds,
+      this.monthsAgo(LIQUIDITY_MONTHS),
+    );
     const counts = new Map<number, number>();
     for (const trade of rows) {
-      if (trade.complexId !== null) counts.set(trade.complexId, (counts.get(trade.complexId) ?? 0) + 1);
+      if (trade.complexId !== null)
+        counts.set(trade.complexId, (counts.get(trade.complexId) ?? 0) + 1);
     }
     return counts;
   }
@@ -177,7 +184,11 @@ export class TradeStatsService {
   }
 
   /** 최근 실거래 목록 (화면 표시용). 해제 거래도 표시는 하되 통계에는 안 쓴다 */
-  findRecentTrades(complexId: number, area?: Area, limit = 20): ReturnType<ITradeRepository['findTrades']> {
+  findRecentTrades(
+    complexId: number,
+    area?: Area,
+    limit = 20,
+  ): ReturnType<ITradeRepository['findTrades']> {
     return this.repository.findTrades({ complexId, area, limit, includeCanceled: true });
   }
 

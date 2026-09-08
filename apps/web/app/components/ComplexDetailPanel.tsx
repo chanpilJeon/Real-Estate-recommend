@@ -1,7 +1,7 @@
 'use client';
 
 import type { ComplexDetailDto } from '@apt/shared';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   CartesianGrid,
   Line,
@@ -26,28 +26,6 @@ interface TrendPoint {
   count: number;
 }
 
-/** 실거래 목록에서 월별 중위가를 만든다 (해제 거래 제외) */
-function buildTrend(trades: TradeRow[]): TrendPoint[] {
-  const buckets = new Map<string, number[]>();
-  for (const trade of trades) {
-    if (trade.isCanceled) continue; // 해제된 거래는 추세에서 뺀다
-    const key = trade.contractedAt.slice(0, 7);
-    const bucket = buckets.get(key);
-    if (bucket === undefined) buckets.set(key, [trade.priceManwon]);
-    else bucket.push(trade.priceManwon);
-  }
-
-  return [...buckets.entries()]
-    .map(([yearMonth, prices]) => {
-      const sorted = [...prices].sort((a, b) => a - b);
-      const mid = Math.floor(sorted.length / 2);
-      const median =
-        sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
-      return { yearMonth, medianManwon: Math.round(median), count: prices.length };
-    })
-    .sort((a, b) => a.yearMonth.localeCompare(b.yearMonth));
-}
-
 /** 거래가 가장 많은 전용면적. 동률이면 작은 쪽(수요가 많은 평형) */
 function mostTradedArea(trades: TradeRow[]): number | null {
   const counts = new Map<number, number>();
@@ -61,6 +39,10 @@ function mostTradedArea(trades: TradeRow[]): number | null {
 }
 
 export function ComplexDetailPanel({ complexId, onClose }: Props) {
+  const [trend, setTrend] = useState<TrendPoint[]>([]);
+  const [jeonseRatio, setJeonseRatio] = useState<number | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [detail, setDetail] = useState<ComplexDetailDto | null>(null);
   const [trades, setTrades] = useState<TradeRow[]>([]);
   const [areas, setAreas] = useState<number[]>([]);
@@ -91,14 +73,15 @@ export function ComplexDetailPanel({ complexId, onClose }: Props) {
         // 처음 열 때는 **거래가 가장 많은 면적**을 골라 준다.
         // 여러 평형을 한 선에 섞으면 그 달에 어떤 평형이 거래됐느냐에 따라
         // 값이 널뛰어 시세 흐름을 잘못 읽게 된다 (ToDo.md 5.3: 면적 타입별 시계열).
-        if (!autoPicked && area === undefined && tradeResult.areas.length > 1) {
+        if (!autoPicked && area === undefined && tradeResult.areas.length > 0) {
           setAutoPicked(true);
-          const picked = mostTradedArea(tradeResult.items);
+          const picked = mostTradedArea(tradeResult.items) ?? tradeResult.areas[0] ?? null;
           if (picked !== null) setArea(picked);
         }
       })
       .catch((err: unknown) => {
-        if (alive) setError(err instanceof ApiError ? err.message : '단지 정보를 불러오지 못했습니다.');
+        if (alive)
+          setError(err instanceof ApiError ? err.message : '단지 정보를 불러오지 못했습니다.');
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -109,7 +92,32 @@ export function ComplexDetailPanel({ complexId, onClose }: Props) {
     };
   }, [complexId, area]);
 
-  const trend = useMemo(() => buildTrend(trades), [trades]);
+  useEffect(() => {
+    let alive = true;
+    setTrend([]);
+    setJeonseRatio(null);
+    setStatsError(null);
+    setStatsLoading(area !== undefined);
+    if (area === undefined) return;
+    api
+      .getStatistics(complexId, area)
+      .then((result) => {
+        if (alive) {
+          setTrend(result.trend);
+          setJeonseRatio(result.jeonseRatio);
+        }
+      })
+      .catch(() => {
+        if (alive)
+          setStatsError('가격 통계를 불러오지 못했습니다. 잠시 후 면적을 다시 선택해 주세요.');
+      })
+      .finally(() => {
+        if (alive) setStatsLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [complexId, area]);
 
   return (
     <aside className="detail-panel panel-floating">
@@ -146,16 +154,18 @@ export function ComplexDetailPanel({ complexId, onClose }: Props) {
               label="동수"
               value={detail.buildingCount > 0 ? `${detail.buildingCount}개동` : '미상'}
             />
-            <Spec label="연식" value={detail.ageYears === null ? '미상' : `${detail.ageYears}년차`} />
+            <Spec
+              label="연식"
+              value={detail.ageYears === null ? '미상' : `${detail.ageYears}년차`}
+            />
             <Spec
               label="세대당 주차"
-              value={detail.parkingPerHousehold === null ? '미상' : `${detail.parkingPerHousehold}대`}
+              value={
+                detail.parkingPerHousehold === null ? '미상' : `${detail.parkingPerHousehold}대`
+              }
             />
             <Spec label="난방" value={detail.heatingType ?? '미상'} />
-            <Spec
-              label="역까지"
-              value={formatWalk(detail.nearestSubwayM) ?? '미상'}
-            />
+            <Spec label="역까지" value={formatWalk(detail.nearestSubwayM) ?? '미상'} />
           </div>
 
           {detail.qualityReasons.length > 0 && (
@@ -221,13 +231,27 @@ export function ComplexDetailPanel({ complexId, onClose }: Props) {
           )}
 
           <div className="stack stack--2">
-            <span className="field-label">실거래가 추이 (월별 중위가)</span>
+            <span className="field-label">실거래가 추이 (최근 36개월 · 이상치 제외)</span>
             {area === undefined && areas.length > 1 && (
               <p className="field-hint">
-                여러 면적이 섞여 있어 실제 시세 흐름과 다르게 보일 수 있습니다. 면적을 골라 보세요.
+                면적을 선택하면 같은 전용면적의 추이와 전세가율을 볼 수 있습니다.
               </p>
             )}
-            {trend.length < 2 ? (
+            {statsError && (
+              <p role="alert" className="text-muted">
+                {statsError}
+              </p>
+            )}
+            <p className="field-hint">
+              전세가율:{' '}
+              {jeonseRatio === null
+                ? '자료 부족 또는 면적 미선택'
+                : `${(jeonseRatio * 100).toFixed(1)}%`}{' '}
+              · 같은 면적의 최근 6개월 전세 보증금 중위가 ÷ 매매 중위가
+            </p>
+            {statsLoading ? (
+              <p className="text-muted">통계 불러오는 중…</p>
+            ) : trend.length < 2 ? (
               <p className="text-muted" style={{ fontSize: 'var(--text-small)' }}>
                 거래가 적어 추이를 그릴 수 없습니다.
               </p>
@@ -235,7 +259,10 @@ export function ComplexDetailPanel({ complexId, onClose }: Props) {
               <div className="chart-box">
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                    <CartesianGrid stroke="var(--color-border-translucent-strong)" vertical={false} />
+                    <CartesianGrid
+                      stroke="var(--color-border-translucent-strong)"
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="yearMonth"
                       tick={{ fill: 'var(--color-text-quaternary)', fontSize: 11 }}
@@ -282,7 +309,10 @@ export function ComplexDetailPanel({ complexId, onClose }: Props) {
             {loading && <p className="text-muted">불러오는 중…</p>}
             <ul className="trade-list">
               {trades.slice(0, 15).map((trade, index) => (
-                <li key={`${trade.contractedAt}-${trade.priceManwon}-${index}`} className="trade-row">
+                <li
+                  key={`${trade.contractedAt}-${trade.priceManwon}-${index}`}
+                  className="trade-row"
+                >
                   <span className="trade-row__date text-mono">{trade.contractedAt}</span>
                   <span className="trade-row__area">{trade.areaLabel}</span>
                   <span className="trade-row__floor text-faint">{trade.floor}층</span>
@@ -291,7 +321,9 @@ export function ComplexDetailPanel({ complexId, onClose }: Props) {
                 </li>
               ))}
             </ul>
-            {trades.length === 0 && !loading && <p className="text-muted">실거래 내역이 없습니다.</p>}
+            {trades.length === 0 && !loading && (
+              <p className="text-muted">실거래 내역이 없습니다.</p>
+            )}
           </div>
         </>
       )}

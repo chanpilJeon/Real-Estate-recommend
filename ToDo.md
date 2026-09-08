@@ -1520,12 +1520,12 @@ main().finally(() => prisma.$disconnect());
 
 ### Step 7 — L5 `recommendation` (1.5주)
 
-- [ ] `ScoringPolicy` — 가중치 기반 점수화 (순수 클래스, DB 무관)
-- [ ] 프리셋 3종 (`value` / `location` / `newbuild`)
-- [ ] `ScoreBreakdown.reasons` — 사람이 읽는 추천 근거 문자열 생성
-- [ ] `GET /recommendations?regionCode=&preset=`
-- [ ] 전세가율 표시, 이상치 제외 추세선
-- [ ] 단위 테스트: 동일 입력에 프리셋만 바꿔 순위가 의도대로 바뀌는지
+- [x] `ScoringPolicy` — 가중치 기반 점수화 (순수 클래스, DB 무관)
+- [x] 프리셋 3종 (`value` / `location` / `newbuild`)
+- [x] `ScoreBreakdown.reasons` — 사람이 읽는 추천 근거 문자열 생성
+- [x] `GET /recommendations?regionCode=&preset=`
+- [x] 전세가율 표시, 이상치 제외 추세선
+- [x] 단위 테스트: 동일 입력에 프리셋만 바꿔 순위가 의도대로 바뀌는지
 
 **🧪 테스트 지점 M5**: 추천 결과가 납득되는지 (사람 판단과 비교)
 
@@ -1599,7 +1599,7 @@ main().finally(() => prisma.$disconnect());
 
 이 항목들은 "있으면 좋은 것"이 아니라 위 테스트를 가능하게 하는 **필수 구현물**이다.
 
-- [ ] **`scripts/start.command`** (Step 0) — macOS에서 더블클릭하면 Docker·서버 기동 후 브라우저를 자동으로 여는 래퍼
+- [x] **`scripts/start.command`** (Step 0) — macOS에서 더블클릭하면 Docker·서버 기동 후 브라우저를 자동으로 여는 래퍼
 
 ```bash
 #!/usr/bin/env bash
@@ -1613,7 +1613,7 @@ wait
 ```
 
 - [ ] **데모 모드** (Step 4-A) — `.env`에 `DEMO_MODE=true`면 공공 API 키 없이 `Fake*Client` + `seed-demo.ts` 샘플 데이터로 전체 화면이 동작. **API 승인 전에도 화면 테스트 가능**
-- [ ] **`docs/TEST-CHECKLIST.md`** — 아래 7.4 시나리오를 체크박스 표로 만든 문서. 테스터가 이 파일만 보고 진행
+- [x] **`docs/TEST-CHECKLIST.md`** — 아래 7.4 시나리오를 체크박스 표로 만든 문서. 테스터가 이 파일만 보고 진행
 - [ ] **사람이 읽는 상태 배너** (Step 9) — `/admin` 최상단에 "정상 / 확인 필요 / 문제 발생" 3단계 한국어 문장. JSON·로그를 읽게 하지 않는다
 - [~] **버그 리포트 양식** — 화면 우하단 "문제 신고" 버튼 → 현재 URL·검색조건·스크린샷을 자동 첨부해 이슈 생성 (Step 6)
 - [ ] **스테이징 URL** (Step 8) — 테스트 전용 주소. 운영 데이터와 분리

@@ -145,10 +145,12 @@ export class Complex {
   qualityScore(asOf: Date = new Date()): number {
     const age = this.ageYears(asOf);
 
-    const scaleScore = this.props.households <= 0 ? NEUTRAL : clamp01(this.props.households / FULL_SCORE_HOUSEHOLDS);
+    const scaleScore =
+      this.props.households <= 0 ? NEUTRAL : clamp01(this.props.households / FULL_SCORE_HOUSEHOLDS);
     const ageScore = age === null ? NEUTRAL : clamp01(1 - age / OLD_AGE_YEARS);
     const parking = this.parkingPerHousehold();
-    const parkingScore = parking === null ? NEUTRAL : clamp01(parking / ENOUGH_PARKING_PER_HOUSEHOLD);
+    const parkingScore =
+      parking === null ? NEUTRAL : clamp01(parking / ENOUGH_PARKING_PER_HOUSEHOLD);
 
     return round3(
       scaleScore * QUALITY_WEIGHTS.scale +

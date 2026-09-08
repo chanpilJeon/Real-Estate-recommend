@@ -3,6 +3,7 @@ import type {
   ComplexSummaryDto,
   PaginatedDto,
   RegionCandidateDto,
+  RecommendationDto,
 } from '@apt/shared';
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
@@ -86,10 +87,22 @@ export const api = {
   collectedRegions: () => request<CollectedRegion[]>('/api/collected-regions'),
 
   searchRegions: (q: string, limit = 10) =>
-    request<{ keyword: string; candidates: RegionCandidateDto[] }>('/api/regions/search', { q, limit }),
+    request<{ keyword: string; candidates: RegionCandidateDto[] }>('/api/regions/search', {
+      q,
+      limit,
+    }),
 
   searchComplexes: (params: SearchParams) =>
     request<PaginatedDto<ComplexSummaryDto>>('/api/complexes', params),
+
+  recommend: (params: SearchParams & { preset: string }) =>
+    request<PaginatedDto<RecommendationDto>>('/api/recommendations', params),
+
+  getStatistics: (id: number, area: number) =>
+    request<{ trend: TrendPoint[]; jeonseRatio: number | null }>(
+      `/api/complexes/${id}/statistics`,
+      { area },
+    ),
 
   getComplex: (id: number) => request<ComplexDetailDto>(`/api/complexes/${id}`),
 
