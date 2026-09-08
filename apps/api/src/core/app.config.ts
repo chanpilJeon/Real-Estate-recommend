@@ -19,6 +19,7 @@ export class AppConfig {
      * 전국을 매일 훑으면 공공 API 한도를 금방 넘긴다 — 관심 지역만 모은다. (ToDo.md 9절)
      */
     readonly collectSigunguCodes: string[],
+    readonly corsOrigin: string,
   ) {}
 
   get isProduction(): boolean {
@@ -41,7 +42,9 @@ export class AppConfig {
 
     const adminSessionSecret = env.ADMIN_SESSION_SECRET?.trim() ?? '';
     if (!adminSessionSecret) {
-      problems.push('ADMIN_SESSION_SECRET 이 비어 있습니다 — 아래 명령으로 만들 수 있습니다: openssl rand -hex 32');
+      problems.push(
+        'ADMIN_SESSION_SECRET 이 비어 있습니다 — 아래 명령으로 만들 수 있습니다: openssl rand -hex 32',
+      );
     } else if (adminSessionSecret.length < 16) {
       problems.push(
         `ADMIN_SESSION_SECRET 이 너무 짧습니다 (${adminSessionSecret.length}자). 16자 이상으로 설정하세요.`,
@@ -80,15 +83,25 @@ export class AppConfig {
       );
     }
 
+    const corsOrigin = env.CORS_ORIGIN?.trim() || 'http://localhost:3000';
+    try {
+      const url = new URL(corsOrigin);
+      if (!['http:', 'https:'].includes(url.protocol) || url.origin !== corsOrigin)
+        throw new Error();
+    } catch {
+      problems.push('CORS_ORIGIN은 경로 없는 http(s) 웹 주소여야 합니다.');
+    }
+
     const rawNodeEnv = env.NODE_ENV ?? 'development';
     const nodeEnv =
       rawNodeEnv === 'production' || rawNodeEnv === 'test' ? rawNodeEnv : 'development';
 
     if (problems.length > 0) {
       throw new Error(
-        ['환경설정(.env)에 문제가 있어 서버를 시작할 수 없습니다:', ...problems.map((p) => `  · ${p}`)].join(
-          '\n',
-        ),
+        [
+          '환경설정(.env)에 문제가 있어 서버를 시작할 수 없습니다:',
+          ...problems.map((p) => `  · ${p}`),
+        ].join('\n'),
       );
     }
 
@@ -101,6 +114,7 @@ export class AppConfig {
       adminSessionSecret,
       demoMode,
       collectSigunguCodes,
+      corsOrigin,
     );
   }
 

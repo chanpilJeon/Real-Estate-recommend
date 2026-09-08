@@ -15,7 +15,7 @@ async function bootstrap(): Promise<void> {
   // 관리자 세션 쿠키를 읽기 위해
   app.use(cookieParser());
   // 프론트(Next.js, 3000번)에서 API(4000번)를 부를 수 있게 허용
-  app.enableCors({ origin: true, credentials: true });
+  app.enableCors({ origin: config.corsOrigin, credentials: true });
   app.setGlobalPrefix('api');
   app.enableShutdownHooks();
 

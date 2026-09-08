@@ -149,3 +149,18 @@ describe('AppConfig.load — 기동 시 환경설정 검증', () => {
     });
   });
 });
+
+describe('CORS origin', () => {
+  it('로컬 기본값과 운영 웹 주소를 구분한다', () => {
+    expect(AppConfig.load(validEnv()).corsOrigin).toBe('http://localhost:3000');
+    expect(
+      AppConfig.load({ ...validEnv(), CORS_ORIGIN: 'https://app.example.com' }).corsOrigin,
+    ).toBe('https://app.example.com');
+  });
+  it.each(['*', 'https://app.example.com/path', 'javascript:alert(1)'])(
+    '잘못된 origin %s를 거부한다',
+    (origin) => {
+      expect(() => AppConfig.load({ ...validEnv(), CORS_ORIGIN: origin })).toThrow(/CORS_ORIGIN/);
+    },
+  );
+});

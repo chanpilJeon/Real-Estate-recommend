@@ -46,3 +46,7 @@ data/csv/*
 
 /playwright-report/
 /test-results/
+
+# Deployment secrets
+.env.*
+!.env.example

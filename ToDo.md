@@ -1533,15 +1533,15 @@ main().finally(() => prisma.$disconnect());
 
 ### Step 8 — 배포 + 스테이징 (1주) ★ 비기술자 테스트가 쉬워지는 분기점
 
-- [ ] `Dockerfile` (api) — multi-stage, node:20-slim
-- [ ] `docker-compose.prod.yml` — api + Caddy(자동 HTTPS)
+- [x] `Dockerfile` (api) — multi-stage, node:24-bookworm-slim (Node 20 지원 종료에 따라 24 LTS 사용; 로컬 이미지 빌드 + 임시 DB 마이그레이션·기동 검증 성공)
+- [~] `docker-compose.prod.yml` — api + Caddy(자동 HTTPS): 파일 작성, DNS·클라우드 연결 대기
 - [ ] AWS RDS for MariaDB(db.t3.micro, 백업 7일) + EC2 t3.small 프로비저닝
-- [ ] `scripts/deploy.sh` — build → ECR push → ssh pull & up
+- [~] `scripts/deploy.sh` — build → ECR push → ssh pull & up: 사전 조건 검사 포함, 실제 AWS 실행 대기
 - [ ] Vercel에 `apps/web` 연결
 - [ ] SSM Parameter Store에 시크릿 등록 (`ADMIN_SESSION_SECRET`은 로컬과 다른 값)
 - [ ] **스테이징 URL 발급** — 비기술자가 설치 없이 접속할 주소
-- [ ] GitHub Actions: PR 시 lint+test, main 머지 시 자동 배포
-- [ ] `prisma migrate deploy`를 배포 스크립트 첫 단계로 고정
+- [~] GitHub Actions: PR·브랜치 push 시 lint/test/typecheck/build/E2E 구성, main 자동 배포는 클라우드 연결 후
+- [x] `prisma migrate deploy`를 API 컨테이너 기동 첫 단계로 고정 (실패 시 서버를 시작하지 않음)
 - [ ] 모니터링: CloudWatch 로그 + 배치 실패 알림(SNS→이메일) + UptimeRobot
 
 **🧪 테스트 지점 M6**: URL 하나로 아무나 테스트 가능 (설치 불필요)

@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { KakaoGeocodeClient } from './kakao-geocode.client';
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 describe('학교 검색 페이지', () => {
   it('첫 페이지가 중학교뿐이어도 다음 페이지 초등학교를 가져온다', async () => {
     const fetch = vi
