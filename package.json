@@ -23,7 +23,8 @@
     "seed:region": "tsx scripts/seed-region.ts",
     "collect": "tsx --tsconfig apps/api/tsconfig.json scripts/collect.ts",
     "load-csv": "tsx --tsconfig apps/api/tsconfig.json scripts/load-csv.ts",
-    "backfill-jibun": "tsx --tsconfig apps/api/tsconfig.json scripts/backfill-jibun.ts"
+    "backfill-jibun": "tsx --tsconfig apps/api/tsconfig.json scripts/backfill-jibun.ts",
+    "fix-duplicates": "tsx --tsconfig apps/api/tsconfig.json scripts/fix-duplicate-complexes.ts"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",

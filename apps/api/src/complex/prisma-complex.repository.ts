@@ -90,10 +90,9 @@ export class PrismaComplexRepository implements IComplexRepository {
           둘 다 **후보가 딱 하나일 때만** 인정한다. 여럿이면 어느 쪽인지 알 수 없고,
           엉뚱한 단지에 세대수를 씌우면 추천이 조용히 틀어진다.
         */
+        // 이름이 아예 다를 때는 번지로 찾는다 (실거래 '한보미도맨션2' ↔ K-apt '대치미도맨션')
         if (existingId === null && !createMissing) {
-          existingId =
-            (await this.findOnlyByJibun(item.regionCode, item.jibun)) ??
-            (await this.findOnlyByName(item.regionCode, data.nameNormalized));
+          existingId = await this.findOnlyByJibun(item.regionCode, item.jibun);
         }
 
         if (existingId === null) {
@@ -181,7 +180,21 @@ export class PrismaComplexRepository implements IComplexRepository {
       where: { regionCode: item.regionCode, nameNormalized, builtYear: item.builtYear },
       select: { id: true },
     });
-    return byIdentity?.id ?? null;
+    if (byIdentity !== null) return byIdentity.id;
+
+    /*
+      건축년도만 다른 같은 이름은 **같은 단지로 본다.**
+
+      국토부 실거래 자료는 같은 단지의 거래인데도 건축년도를 다르게 주는 경우가 있다
+      (면목한신 1987/1988, 목동신시가지10 1987/1988 …). 이것을 다른 단지로 만들면
+      ① 목록에 같은 아파트가 두 번 나오고
+      ② 매칭이 애매해져(후보 2개) 그 단지 거래가 통째로 안 붙는다. 실제로 715건이 그랬다.
+
+      한 법정동 안에 이름이 완전히 같은 서로 다른 아파트는 사실상 없다.
+      그래도 **후보가 딱 하나일 때만** 인정한다 — '래미안역삼1차'와 '래미안역삼9차'처럼
+      차수가 다르면 정규화명 자체가 달라 여기 걸리지 않는다.
+    */
+    return this.findOnlyByName(item.regionCode, nameNormalized);
   }
 }
 
