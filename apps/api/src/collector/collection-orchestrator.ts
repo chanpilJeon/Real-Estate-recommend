@@ -291,21 +291,26 @@ export class CollectionOrchestrator {
 
     /*
       단지 상세는 **단지당 2회**(기본정보+상세정보) 호출한다. 공공 API 하루 한도가
-      가장 먼저 닳는 곳이라, 받아 봐야 소용없는 것을 미리 걸러 낸다.
+      가장 먼저 닳는 곳이라 받아 봐야 소용없는 것을 걸러 내야 하는데, 걸러내는 기준을
+      **이름으로 잡으면 안 된다.** 이름이 다른 단지야말로 번지로 이어붙여야 할 대상인데
+      (실거래 '한보미도맨션2' ↔ K-apt '대치미도맨션'), 이름으로 거르면 그것들을
+      아예 받지 않게 되어 번지 대조가 무의미해진다.
 
-      ① 실거래에 나오지 않은 단지 — 우리 목록에 없으니 보강 대상이 아니다.
-         (K-apt 목록의 절반 이상이 여기 해당한다. 이름이 달라 못 붙는 것 포함)
-      ② 이미 세대수를 아는 단지 — 세대수·주차는 거의 변하지 않으니 다시 받지 않는다.
+      그래서 **이미 연결된 것**만 건너뛴다. 연결에 성공하면 그 단지에 kaptCode 가
+      기록되므로, 다음 실행부터는 자동으로 빠진다. 회를 거듭할수록 싸진다.
     */
     const existing = await this.deps.complexes.findByRegionPrefix(sigunguCode);
-    const needsEnrichment = new Set(
-      existing.filter((c) => c.households <= 0).map((c) => c.nameNormalized),
+    // 실거래가 한 건도 없는 지역은 보강할 단지 자체가 없다
+    if (existing.length === 0) return;
+    if (existing.every((c) => c.households > 0)) return;
+
+    const linked = new Set(
+      existing.map((c) => c.kaptCode).filter((code): code is string => code !== null && code !== ''),
     );
-    if (needsEnrichment.size === 0) return;
 
     const inputs: ComplexUpsertInput[] = [];
     for (const summary of list) {
-      if (!needsEnrichment.has(normalizeComplexName(summary.name))) continue;
+      if (linked.has(summary.kaptCode)) continue;
 
       const detail = await this.deps.complexInfo.fetchComplexDetail(summary.kaptCode);
       if (detail === null) continue;
