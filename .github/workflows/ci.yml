@@ -19,6 +19,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec prisma generate
+      - run: pnpm --filter @apt/shared build
       - run: pnpm lint && pnpm test && pnpm typecheck && pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
