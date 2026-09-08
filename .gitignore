@@ -43,3 +43,6 @@ data/*
 !data/csv/
 data/csv/*
 !data/csv/.gitkeep
+
+/playwright-report/
+/test-results/

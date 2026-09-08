@@ -11,6 +11,7 @@ import { ComplexDetailPanel } from './ComplexDetailPanel';
 import { ComplexList } from './ComplexList';
 import { ConditionPanel, type Conditions } from './ConditionPanel';
 import { KakaoMap } from './KakaoMap';
+import { ProblemReport } from './ProblemReport';
 import { RegionSearchInput } from './RegionSearchInput';
 
 type MobileTab = 'list' | 'map';
@@ -126,6 +127,7 @@ export function SearchScreen() {
 
   return (
     <div className="search-screen">
+      <ProblemReport />
       <section className="search-sidebar">
         <RegionSearchInput
           selected={region}

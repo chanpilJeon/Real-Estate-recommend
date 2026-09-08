@@ -25,9 +25,11 @@
     "load-csv": "tsx --tsconfig apps/api/tsconfig.json scripts/load-csv.ts",
     "backfill-jibun": "tsx --tsconfig apps/api/tsconfig.json scripts/backfill-jibun.ts",
     "fix-duplicates": "tsx --tsconfig apps/api/tsconfig.json scripts/fix-duplicate-complexes.ts",
-    "collect:poi": "tsx --tsconfig apps/api/tsconfig.json scripts/collect-poi.ts"
+    "collect:poi": "tsx --tsconfig apps/api/tsconfig.json scripts/collect-poi.ts",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "1.55.0",
     "@types/node": "^20.14.11",
     "@typescript-eslint/eslint-plugin": "^7.16.1",
     "@typescript-eslint/parser": "^7.16.1",
