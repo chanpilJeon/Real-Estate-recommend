@@ -53,6 +53,27 @@ export class SearchCondition {
   }
 
   /**
+   * 면적 하한을 정하지 않았으면 기본값을 채운 새 조건을 돌려준다.
+   *
+   * 추천은 **우리가 골라 주는 것**이라, 조건을 따로 넣지 않은 사람에게
+   * 14㎡ 원룸을 1순위로 내밀면 안 된다.
+   * 직접 조건을 걸어 둘러보는 검색에는 적용하지 않는다.
+   */
+  withDefaultMinArea(sqm: number): SearchCondition {
+    if (this.areaRange.min !== null) return this;
+
+    return new SearchCondition(
+      this.regionCodes,
+      this.priceRange,
+      Range.of(Area.fromSqm(sqm), this.areaRange.max, '면적'),
+      this.minBuiltYear,
+      this.minHouseholds,
+      this.page,
+      this.pageSize,
+    );
+  }
+
+  /**
    * 시군구 단위로 지정된 코드들 (뒤 5자리가 00000).
    * 이 경우 그 아래 모든 동을 훑어야 한다 — "강남구"를 골랐는데
    * 강남구라는 이름의 동만 찾으면 결과가 0건이 된다.
