@@ -65,6 +65,14 @@ const HEADLINE: Record<StatusLevel, string> = {
   error: '문제가 있습니다. 아래 항목을 확인해 주세요.',
 };
 
+/** 코드가 아니라 사람이 아는 이름으로 부른다 */
+export function providerName(provider: string): string {
+  if (provider === 'molit') return '국토부 실거래 API';
+  if (provider === 'molit-apt') return '국토부 단지정보 API';
+  if (provider === 'kakao') return '카카오 API';
+  return provider;
+}
+
 /** 셋 중 가장 나쁜 단계 */
 function worst(levels: StatusLevel[]): StatusLevel {
   if (levels.includes('error')) return 'error';
@@ -126,7 +134,7 @@ export function judgeStatus(signals: StatusSignals): ServiceStatus {
 
   // 4) 공공 API 한도 — 넘으면 다음 수집이 통째로 실패한다
   for (const quota of signals.quotas) {
-    const name = quota.provider === 'molit' ? '국토부 API' : '카카오 API';
+    const name = providerName(quota.provider);
     // 내림으로 보여준다 — 79.6% 를 "80%" 로 보여주면서 경고가 안 뜨면 사람이 헷갈린다
     const percent = Math.floor(quota.ratio * 100);
     // 한도 초과는 '문제 발생'이 아니라 '확인 필요'다 — 자정에 저절로 풀리고,

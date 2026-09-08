@@ -1,7 +1,11 @@
 import { kstDateOnly } from './domain/kst-date';
 import type { IQuotaStore } from './ports';
 
-export type QuotaProvider = 'molit' | 'kakao';
+/**
+  * 한도는 **API 마다 따로** 걸린다. 한 통에 세면 대시보드가 "17,083 / 10,000" 처럼
+  * 한도를 넘긴 숫자를 보여주게 되고, 정작 어느 API 가 막혔는지 알 수 없다.
+  */
+export type QuotaProvider = 'molit' | 'molit-apt' | 'kakao';
 
 /**
  * 공공 API 일일 호출 한도.
@@ -9,7 +13,10 @@ export type QuotaProvider = 'molit' | 'kakao';
  * 운영계정으로 전환하면 이 값을 올린다.
  */
 export const DAILY_LIMITS: Record<QuotaProvider, number> = {
+  /** 실거래가(매매·전월세) — 개발계정 기준 */
   molit: 10_000,
+  /** 공동주택 단지 목록·정보 — 실거래보다 한도가 낮다 */
+  'molit-apt': 5_000,
   kakao: 100_000,
 };
 

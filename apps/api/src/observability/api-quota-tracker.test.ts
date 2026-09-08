@@ -93,6 +93,6 @@ describe('ApiQuotaTracker — 일일 호출량 추적', () => {
 
   it('allUsage 는 모든 제공자를 한 번에 준다 (대시보드용)', async () => {
     const usage = await at('2026-09-04T05:00:00Z').allUsage();
-    expect(usage.map((u) => u.provider).sort()).toEqual(['kakao', 'molit']);
+    expect(usage.map((u) => u.provider).sort()).toEqual(['kakao', 'molit', 'molit-apt']);
   });
 });

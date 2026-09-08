@@ -6,6 +6,7 @@
 export { AdminModule } from './admin.module';
 export {
   judgeStatus,
+  providerName,
   MATCH_FAILURE_WARN,
   QUOTA_WARN_RATIO,
   STALE_DAYS,

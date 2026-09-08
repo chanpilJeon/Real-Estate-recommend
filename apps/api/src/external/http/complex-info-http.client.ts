@@ -91,7 +91,8 @@ export class ComplexInfoHttpClient implements IComplexInfoClient {
     }).toString()}`;
 
     const text = await this.http.getText(url);
-    await this.quota.increment('molit', 1);
+    // 단지 정보는 실거래와 한도가 따로다 (5,000 / 10,000)
+    await this.quota.increment('molit-apt', 1);
 
     const gateway = gatewayErrorFrom(text);
     if (gateway !== null) throw gateway;

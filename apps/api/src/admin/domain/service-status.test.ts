@@ -86,7 +86,7 @@ describe('judgeStatus — "지금 정상인가"를 한 문장으로', () => {
   describe('공공 API 한도', () => {
     it(`${QUOTA_WARN_RATIO * 100}% 를 넘으면 경고`, () => {
       const signals = { quotas: [{ provider: 'molit', used: 8_500, limit: 10_000, ratio: 0.85 }] };
-      expect(check(signals, '국토부 API')?.level).toBe('warn');
+      expect(check(signals, '국토부 실거래 API')?.level).toBe('warn');
     });
 
     it('다 써도 오류가 아니라 경고다 — 자정에 저절로 풀리기 때문', () => {
@@ -99,14 +99,23 @@ describe('judgeStatus — "지금 정상인가"를 한 문장으로', () => {
 
     it('79.6% 를 80% 로 보여주면서 경고를 안 띄우지 않는다 (표시와 판정이 어긋나지 않게)', () => {
       const signals = { quotas: [{ provider: 'molit', used: 7_960, limit: 10_000, ratio: 0.796 }] };
-      const check = judgeStatus({ ...healthy, ...signals }).checks.find((c) => c.label === '국토부 API');
+      const check = judgeStatus({ ...healthy, ...signals }).checks.find(
+        (c) => c.label === '국토부 실거래 API',
+      );
       expect(check?.level).toBe('ok');
       expect(check?.detail).toContain('79%');
     });
 
-    it('카카오는 카카오라고 부른다 (provider 코드를 그대로 보여주지 않는다)', () => {
-      const signals = { quotas: [{ provider: 'kakao', used: 10, limit: 100_000, ratio: 0.0001 }] };
+    it('provider 코드를 그대로 보여주지 않는다', () => {
+      const signals = {
+        quotas: [
+          { provider: 'kakao', used: 10, limit: 100_000, ratio: 0.0001 },
+          { provider: 'molit-apt', used: 10, limit: 5_000, ratio: 0.002 },
+        ],
+      };
       expect(check(signals, '카카오 API')).toBeDefined();
+      // 실거래와 단지정보는 한도가 따로라 따로 보여줘야 어디가 막혔는지 알 수 있다
+      expect(check(signals, '국토부 단지정보 API')).toBeDefined();
     });
   });
 

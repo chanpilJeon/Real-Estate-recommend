@@ -1559,15 +1559,15 @@ main().finally(() => prisma.$disconnect());
 
 ### Step 9 — L6 `admin` 대시보드 (1.5주)
 
-- [ ] `GET /admin/health` — API·DB·스케줄러·쿼터 상태
-- [ ] `GET /admin/metrics` — 지표 집계 (무거운 쿼리 5분 캐시)
-- [ ] `GET /admin/logs?level=&q=&page=`
-- [ ] `GET /admin/jobs` / `POST /admin/jobs/:name/run` (수동 트리거)
-- [ ] `/admin/login`, `/admin/password` (최초 로그인 시 강제 진입)
-- [ ] `/admin` 개요 화면 — 서버상태 / 핵심지표 / 최근 로그·에러 (8절 레이아웃)
-- [ ] `/admin/jobs` — 배치 수동 실행 UI
-- [ ] `/admin/matches` — 매칭 실패 수동 보정 UI (`MatchOverride` 학습)
-- [ ] 30초 자동 새로고침 + 기본 비밀번호 경고 배너
+- [x] `GET /admin/health` — API·DB·스케줄러·쿼터 상태 + **사람이 읽는 판정 한 문장**
+- [x] `GET /admin/metrics` — 지표 집계 (무거운 쿼리 5분 캐시)
+- [x] `GET /admin/logs?level=&q=&page=` (+ `/logs/errors` 그룹핑)
+- [x] `GET /admin/jobs` / `POST /admin/jobs/:name/run` (수동 트리거)
+- [x] `/admin/login`, `/admin/password` (최초 로그인 시 강제 진입)
+- [x] `/admin` 개요 화면 — 서버상태 / 핵심지표 / 최근 로그·에러 (8절 레이아웃)
+- [x] `/admin/jobs` — 배치 수동 실행 UI
+- [x] `/admin/matches` — 매칭 실패 수동 보정 UI (`MatchOverride` 학습)
+- [x] 30초 자동 새로고침 + 기본 비밀번호 경고 배너
 - [ ] **운영 첫 배포 직후 관리자 비밀번호 변경** (기본값 `12345`는 로컬 전용)
 
 **🧪 테스트 지점 M7**: 비기술자도 "지금 서비스가 정상인가"를 대시보드로 판단

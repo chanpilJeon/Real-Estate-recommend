@@ -1122,3 +1122,258 @@ svg {
 .recommendation-score { color: var(--color-accent-hover); font-size: var(--text-small); }
 .score-parts, .recommendation-reason { font-size: var(--text-micro); color: var(--color-text-tertiary); }
 .pagination { display: flex; justify-content: center; align-items: center; gap: 16px; padding: 16px; }
+
+/* ──────────────────────────────────────────────────────────────
+   관리자 대시보드 (ToDo.md 8절)
+
+   서비스 화면과 같은 토큰을 쓰되, 정보 밀도를 높인다.
+   상태 색은 badge 와 같은 계열을 재사용해 "빨강=문제"라는 규칙이 흔들리지 않게 한다.
+   ────────────────────────────────────────────────────────────── */
+.admin-header {
+  border-bottom: 1px solid var(--color-border-translucent);
+  background: var(--color-bg-level-1);
+}
+.admin-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  height: 52px;
+}
+.admin-header__logo {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+.admin-nav {
+  display: flex;
+  gap: var(--space-4);
+  font-size: var(--text-mini);
+}
+.admin-nav a {
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+}
+.admin-nav a:hover {
+  color: var(--color-text-primary);
+}
+
+.admin-page {
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-8);
+}
+.admin-narrow {
+  max-width: 420px;
+  padding-top: var(--space-8);
+}
+.admin-title {
+  font-size: var(--title-3);
+  margin-bottom: var(--space-4);
+}
+.admin-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.admin-section-title {
+  font-size: var(--text-regular);
+  font-weight: var(--font-weight-semibold);
+}
+.admin-error {
+  color: var(--color-status-error-text);
+  font-size: var(--text-mini);
+}
+
+/* 맨 위 상태 — 여기만 보고도 판단이 서야 한다 */
+.status {
+  padding: var(--space-5);
+  border-radius: var(--radius-12);
+  border: 1px solid var(--color-border-translucent-strong);
+  background: var(--color-bg-level-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.status--warn { border-color: var(--color-status-warning-border); }
+.status--error { border-color: var(--color-status-error-border); }
+
+.status__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.status__badge {
+  padding: 3px 10px;
+  border-radius: var(--radius-rounded);
+  font-size: var(--text-mini);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+.status__badge--ok { background: var(--color-status-success-bg); color: var(--color-status-success-text); }
+.status__badge--warn { background: var(--color-status-warning-bg); color: var(--color-status-warning-text); }
+.status__badge--error { background: var(--color-status-error-bg); color: var(--color-status-error-text); }
+
+.status__headline {
+  font-size: var(--text-regular);
+  color: var(--color-text-primary);
+  word-break: keep-all;
+}
+/* 할 일 — 번호를 붙여 "위에서부터 하면 된다"를 분명히 한다 */
+.status__actions {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+}
+.status__actions li { word-break: keep-all; }
+
+.status__checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-2);
+}
+.status__check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-mini);
+}
+.status__check-label {
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+.status__check-detail { word-break: keep-all; }
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot--ok { background: var(--color-status-success-text); }
+.dot--warn { background: var(--color-status-warning-text); }
+.dot--error { background: var(--color-status-error-text); }
+
+.banner {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-8);
+  font-size: var(--text-mini);
+  word-break: keep-all;
+}
+.banner--info { background: var(--color-bg-level-2); color: var(--color-text-secondary); }
+.banner--warn { background: var(--color-status-warning-bg); color: var(--color-status-warning-text); }
+.banner--error { background: var(--color-status-error-bg); color: var(--color-status-error-text); }
+
+.panel {
+  padding: var(--space-5);
+  border-radius: var(--radius-12);
+  border: 1px solid var(--color-border-translucent);
+  background: var(--color-bg-level-1);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--space-2);
+}
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  background: var(--color-bg-level-2);
+  border-radius: var(--radius-8);
+}
+.metric__label { font-size: var(--text-micro); color: var(--color-text-quaternary); }
+.metric__value {
+  font-size: var(--title-3);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+.metric__hint { font-size: var(--text-micro); }
+
+/* 쿼터 막대 — 숫자보다 "얼마나 남았나"가 먼저 보이게 */
+.quota {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-mini);
+}
+.quota__name { color: var(--color-text-secondary); }
+.quota__bar {
+  height: 6px;
+  border-radius: var(--radius-rounded);
+  background: var(--color-bg-level-3);
+  overflow: hidden;
+}
+.quota__fill {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+}
+.quota__fill--warn { background: var(--color-status-warning-text); }
+.quota__text { font-variant-numeric: tabular-nums; }
+
+.log-list,
+.job-list,
+.match-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.log-row,
+.job-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 7px 0;
+  font-size: var(--text-mini);
+  border-bottom: 1px solid var(--color-border-translucent);
+}
+.log-row__time,
+.job-row__time { white-space: nowrap; }
+.log-row__message,
+.job-row__error {
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.job-row__name { color: var(--color-text-primary); min-width: 130px; }
+.job-row__rows { font-variant-numeric: tabular-nums; margin-left: auto; }
+
+.match-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-translucent);
+}
+.match-row__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: var(--text-mini);
+}
+.match-row__name {
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 640px) {
+  .job-row,
+  .log-row { flex-wrap: wrap; }
+  .admin-nav { gap: var(--space-3); font-size: var(--text-micro); }
+}
