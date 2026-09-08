@@ -25,6 +25,7 @@
     "load-csv": "tsx --tsconfig apps/api/tsconfig.json scripts/load-csv.ts",
     "backfill-jibun": "tsx --tsconfig apps/api/tsconfig.json scripts/backfill-jibun.ts",
     "fix-duplicates": "tsx --tsconfig apps/api/tsconfig.json scripts/fix-duplicate-complexes.ts",
+    "verify:molit": "tsx --tsconfig apps/api/tsconfig.json scripts/verify-molit.ts",
     "collect:poi": "tsx --env-file=.env --tsconfig apps/api/tsconfig.json scripts/collect-poi.ts",
     "test:e2e": "playwright test"
   },

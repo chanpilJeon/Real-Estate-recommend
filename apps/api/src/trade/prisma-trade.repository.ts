@@ -78,6 +78,28 @@ export class PrismaTradeRepository implements ITradeRepository {
         skipDuplicates: true,
       });
       inserted += result.count;
+
+      /*
+        ⚠ 해제(취소)는 **덮어써야 한다.**
+
+        국토부는 같은 계약을 두 줄로 준다 — 원거래 한 줄, 해제거래 한 줄.
+        (예: 수원 영통구 '동남' 49.68㎡ 2026-08-13 14층 28,500만원 → 해제일 20260831 짜리와
+         해제일 없는 짜리가 함께 온다)
+
+        중복 판정 지문(sourceHash)에는 해제 여부가 들어가지 않으므로 두 줄은 같은 지문이 되고,
+        `skipDuplicates` 는 **먼저 들어온 쪽을 남긴다.** 원거래가 먼저 오면 해제가 통째로 유실되어
+        **취소된 거래가 시세에 섞인다** (ToDo.md 7.3 합격 기준을 정면으로 어긴다).
+
+        지문에 해제 여부를 넣는 방법도 있지만, 그러면 같은 계약이 두 행으로 쌓인다.
+        한 계약은 한 행으로 두고, 해제됐다는 사실만 덮어쓰는 편이 맞다.
+      */
+      const canceled = chunk.filter((t) => t.isCanceled).map((t) => buildTradeSourceHash(t));
+      if (canceled.length > 0) {
+        await this.prisma.trade.updateMany({
+          where: { sourceHash: { in: canceled }, isCanceled: false },
+          data: { isCanceled: true },
+        });
+      }
     }
 
     return { inserted, skipped: trades.length - inserted };
