@@ -109,6 +109,16 @@ export class TradeStatsService {
     return medians;
   }
 
+  /** 추천의 유동성 지표. 후보 전체를 한 번 조회하며 취소 거래는 저장소에서 제외된다. */
+  async annualTradeCounts(complexIds: number[]): Promise<Map<number, number>> {
+    const rows = await this.repository.findTradesForComplexes(complexIds, this.monthsAgo(LIQUIDITY_MONTHS));
+    const counts = new Map<number, number>();
+    for (const trade of rows) {
+      if (trade.complexId !== null) counts.set(trade.complexId, (counts.get(trade.complexId) ?? 0) + 1);
+    }
+    return counts;
+  }
+
   /** 월별 중위가 추이 (이상치 제외) */
   async priceTrend(
     complexId: number,
@@ -156,7 +166,7 @@ export class TradeStatsService {
         this.medianPrice(complexId, area, months),
       ]);
 
-      if (sale === null) return null;
+      if (sale === null || sale.price.toManwon() <= 0) return null;
 
       const deposits = rents.filter((r) => r.isJeonse()).map((r) => r.deposit.toManwon());
       const jeonseMedian = medianExcludingOutliers(deposits);

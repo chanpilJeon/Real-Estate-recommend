@@ -10,6 +10,8 @@ import { ExternalModule } from './external';
 import { HealthController } from './health.controller';
 import { MatchingModule } from './matching';
 import { ObservabilityModule } from './observability';
+import { RecommendationModule } from './recommendation';
+import { PoiModule } from './poi';
 import { RegionModule } from './region';
 import { SearchModule } from './search';
 import { TradeModule } from './trade';
@@ -33,6 +35,8 @@ import { TradeModule } from './trade';
     MatchingModule,
     CollectorModule,
     SearchModule,
+    PoiModule,
+    RecommendationModule,
     AdminAuthModule,
   ],
   controllers: [HealthController],

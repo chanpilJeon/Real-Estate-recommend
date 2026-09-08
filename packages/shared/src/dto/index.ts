@@ -53,6 +53,8 @@ export interface ComplexSummaryDto {
 export interface RecommendationDto extends ComplexSummaryDto {
   /** 0~100 */
   score: number;
+  breakdown: { price: number; liquidity: number; location: number; quality: number };
+  missingData: string[];
   /** "예산 대비 상위 15%", "역 도보 7분" 같은 문장 */
   reasons: string[];
 }

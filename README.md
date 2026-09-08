@@ -181,6 +181,7 @@ pnpm load-csv --no-geocode           # 좌표 조회 건너뛰기 (빠르지만 
 ```bash
 pnpm load-csv      # 국토부에서 받은 CSV 를 DB 에 넣기
 pnpm backfill-jibun # 단지 지번을 주소에서 채우기 (K-apt 연결률을 올린다)
+pnpm fix-duplicates # 같은 이름으로 갈라진 단지 합치기 (--dry-run 으로 먼저 확인)
 pnpm test          # 단위 테스트 (DB 없이 동작)
 pnpm lint          # 린트 — 모듈 계층 위반도 여기서 잡힌다
 pnpm typecheck     # 타입 검사

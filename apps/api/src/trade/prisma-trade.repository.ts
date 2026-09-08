@@ -16,7 +16,6 @@ import type {
 } from './trade.repository';
 
 const CHUNK = 500;
-const DEFAULT_LIMIT = 200;
 
 type TradeRow = Prisma.TradeGetPayload<Record<string, never>>;
 type RentRow = Prisma.RentGetPayload<Record<string, never>>;
@@ -114,7 +113,7 @@ export class PrismaTradeRepository implements ITradeRepository {
     const rows = await this.prisma.trade.findMany({
       where: this.whereOf(query),
       orderBy: { contractedAt: 'desc' },
-      take: query.limit ?? DEFAULT_LIMIT,
+      take: query.limit,
     });
     return rows.map(toTrade);
   }
@@ -153,7 +152,7 @@ export class PrismaTradeRepository implements ITradeRepository {
         ...(query.since === undefined ? {} : { contractedAt: { gte: query.since } }),
       },
       orderBy: { contractedAt: 'desc' },
-      take: query.limit ?? DEFAULT_LIMIT,
+      take: query.limit,
     });
     return rows.map(toRent);
   }

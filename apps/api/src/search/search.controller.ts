@@ -88,8 +88,12 @@ export class SearchController {
       areaFilter = sqm === undefined ? undefined : this.toArea(sqm);
     }
 
+    const requestedLimit = numberOf(limit, '건수') ?? 20;
+    if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 200) {
+      throw new BadRequestException('건수는 1~200 사이의 정수여야 합니다.');
+    }
     const [trades, areas] = await Promise.all([
-      this.tradeStats.findRecentTrades(complexId, areaFilter, numberOf(limit, '건수') ?? 20),
+      this.tradeStats.findRecentTrades(complexId, areaFilter, requestedLimit),
       this.tradeStats.distinctAreas(complexId),
     ]);
 
@@ -106,6 +110,20 @@ export class SearchController {
       })),
       areas,
     };
+  }
+
+  /** 같은 전용면적의 36개월 추이와 최근 6개월 전세가율. 면적을 섞지 않는다. */
+  @Get('complexes/:id/statistics')
+  async statistics(@Param('id') rawId: string, @Query('area') rawArea?: string) {
+    const id = Number(rawId);
+    if (!Number.isSafeInteger(id) || id < 1) throw new BadRequestException('단지 ID를 확인하세요.');
+    const sqm = numberOf(rawArea, '전용면적');
+    if (sqm === undefined) throw new BadRequestException('추이를 볼 전용면적을 선택하세요.');
+    const area = this.toArea(sqm);
+    const [trend, jeonseRatio] = await Promise.all([
+      this.tradeStats.priceTrend(id, area), this.tradeStats.jeonseRatio(id, area),
+    ]);
+    return { trend, jeonseRatio };
   }
 
   private buildCondition(input: Parameters<typeof SearchCondition.from>[0]): SearchCondition {

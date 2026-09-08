@@ -32,6 +32,22 @@ export class ComplexSearchService {
     condition: SearchCondition,
     sort: SortKey = 'price',
   ): Promise<PaginatedDto<ComplexSummaryDto>> {
+    const { filtered, medians } = await this.findEligible(condition);
+
+    const sorted = this.sortBy(filtered, medians, sort);
+    const total = sorted.length;
+    const start = (condition.page - 1) * condition.pageSize;
+    const items = sorted
+      .slice(start, start + condition.pageSize)
+      .map((complex) => this.toSummary(complex, medians.get(complex.id)?.toManwon() ?? null));
+
+    void this.recordEvent(condition, total);
+
+    return { items, total, page: condition.page, pageSize: condition.pageSize };
+  }
+
+  /** 추천도 동일한 하드 필터를 사용한다. 페이지를 자르기 전에 전체 후보를 반환한다. */
+  async findEligible(condition: SearchCondition) {
     // 1) 단지 속성으로 1차 필터 (지역·연식·세대수·면적 보유)
     const candidates = await this.repository.findCandidates(condition);
 
@@ -52,16 +68,7 @@ export class ComplexSearchService {
       return condition.priceRange.contains(median);
     });
 
-    const sorted = this.sortBy(filtered, medians, sort);
-    const total = sorted.length;
-    const start = (condition.page - 1) * condition.pageSize;
-    const items = sorted
-      .slice(start, start + condition.pageSize)
-      .map((complex) => this.toSummary(complex, medians.get(complex.id)?.toManwon() ?? null));
-
-    void this.recordEvent(condition, total);
-
-    return { items, total, page: condition.page, pageSize: condition.pageSize };
+    return { filtered, medians };
   }
 
   /** 데이터가 실제로 쌓인 지역 목록 (검색 결과가 비었을 때 안내용) */
@@ -99,7 +106,7 @@ export class ComplexSearchService {
     });
   }
 
-  private toSummary(complex: Complex, medianPriceManwon: number | null): ComplexSummaryDto {
+  toSummary(complex: Complex, medianPriceManwon: number | null): ComplexSummaryDto {
     const coordinate = complex.coordinate;
     return {
       id: complex.id,

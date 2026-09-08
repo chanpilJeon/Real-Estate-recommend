@@ -119,9 +119,9 @@ describe('Complex — 단지 도메인 모델', () => {
     });
 
     it('자료가 없는 항목은 0점이 아니라 중립(0.5)으로 계산한다', () => {
-      // 세대수 0 → 규모 0점, 세대당 주차는 계산 불가라 중립, 연식도 자료 없어 중립
+      // 세대수 0은 수집 미상: 모든 항목을 중립으로 계산
       const unknown = make({ households: 0, parkingCount: 0, approvalDate: null, builtYear: null });
-      const expected = 0 * QUALITY_WEIGHTS.scale + 0.5 * QUALITY_WEIGHTS.age + 0.5 * QUALITY_WEIGHTS.parking;
+      const expected = 0.5 * QUALITY_WEIGHTS.scale + 0.5 * QUALITY_WEIGHTS.age + 0.5 * QUALITY_WEIGHTS.parking;
 
       expect(unknown.qualityScore(NOW)).toBeCloseTo(expected, 3);
     });
