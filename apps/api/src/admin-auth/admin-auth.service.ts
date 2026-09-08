@@ -1,6 +1,6 @@
 import type { ILogger } from '../core';
 
-import { PasswordPolicy } from './domain/password-policy';
+import { DEFAULT_PASSWORDS, PasswordPolicy } from './domain/password-policy';
 import { generateSessionToken, hashSessionToken } from './domain/token';
 import type { AdminSession, LoginResult } from './domain/types';
 import { AdminNotFoundError, InvalidCurrentPasswordError, PasswordPolicyError } from './errors';
@@ -120,6 +120,23 @@ export class AdminAuthService {
   }
 
   /** 만료된 세션 정리 (일 1회 cron) */
+  /**
+   * 저장된 비밀번호가 아직 기본값인가 — 대시보드 경고 배너용 (ToDo.md 8절).
+   *
+   * `mustChangePassword` 만으로는 알 수 없다. 강제 변경을 끝낸 뒤에 다시 기본값으로
+   * 되돌려 놓은 경우를 잡지 못하기 때문이다. 그래서 해시를 직접 대조한다.
+   * 결과에 비밀번호 자체는 들어가지 않는다.
+   */
+  async isUsingDefaultPassword(adminId: number): Promise<boolean> {
+    const user = await this.users.findById(adminId);
+    if (user === null) return false;
+
+    for (const candidate of DEFAULT_PASSWORDS) {
+      if (await this.hasher.compare(candidate, user.passwordHash)) return true;
+    }
+    return false;
+  }
+
   cleanupExpiredSessions(): Promise<number> {
     return this.sessions.deleteExpired(this.now());
   }

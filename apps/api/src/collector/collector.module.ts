@@ -11,7 +11,7 @@ import {
   type IGeocodeClient,
   type IMolitClient,
 } from '../external';
-import { ComplexMatcher, MatchingModule } from '../matching';
+import { ComplexMatcher, MatchFailureService, MatchingModule } from '../matching';
 import { JobRunRecorder } from '../observability';
 import { RegionModule, RegionSearchService } from '../region';
 import { TRADE_REPOSITORY, TradeModule, TradeStatsService, type ITradeRepository } from '../trade';
@@ -36,6 +36,7 @@ import { DailyCollectionJob } from './daily-collection.job';
         trades: ITradeRepository,
         tradeStats: TradeStatsService,
         matcher: ComplexMatcher,
+        matchFailures: MatchFailureService,
         regions: RegionSearchService,
         recorder: JobRunRecorder,
         logger: ILogger,
@@ -48,6 +49,7 @@ import { DailyCollectionJob } from './daily-collection.job';
           trades,
           tradeStats,
           matcher,
+          matchFailures,
           regions,
           recorder,
           logger,
@@ -60,6 +62,7 @@ import { DailyCollectionJob } from './daily-collection.job';
         TRADE_REPOSITORY,
         TradeStatsService,
         ComplexMatcher,
+        MatchFailureService,
         RegionSearchService,
         JobRunRecorder,
         LOGGER,

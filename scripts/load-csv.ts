@@ -43,6 +43,7 @@ import type { RawRent, RawTrade } from '../apps/api/src/external/domain/raw-type
 import type { IComplexInfoClient } from '../apps/api/src/external/ports';
 import { KakaoGeocodeClient } from '../apps/api/src/external/http/kakao-geocode.client';
 import { ComplexMatcher } from '../apps/api/src/matching/complex-matcher';
+import { MatchFailureService } from '../apps/api/src/matching/match-failure.service';
 import { PrismaMatchRepository } from '../apps/api/src/matching/prisma-match.repository';
 import { ApiQuotaTracker } from '../apps/api/src/observability/api-quota-tracker';
 import { JobRunRecorder } from '../apps/api/src/observability/job-run-recorder';
@@ -241,12 +242,13 @@ async function main(): Promise<void> {
       builtYear: c.builtYear,
     }));
 
+  const matchRepository = new PrismaMatchRepository(prisma);
   const matcher = new ComplexMatcher(
     {
       byRegion: async (code) => lighten(await complexes.findByRegion(RegionCode.parse(code))),
       bySigungu: async (code) => lighten(await complexes.findByRegionPrefix(code)),
     },
-    new PrismaMatchRepository(prisma),
+    matchRepository,
   );
 
   // ── 4. CSV 에서 단지 만들기 ─────────────────────────────────────
@@ -278,6 +280,8 @@ async function main(): Promise<void> {
   );
 
   // ── 5. 거래 적재 ────────────────────────────────────────────────
+  const matchFailures = new MatchFailureService(matchRepository, trades, logger);
+
   const orchestrator = new CollectionOrchestrator({
     molit,
     complexInfo: NO_COMPLEX_INFO,
@@ -289,6 +293,7 @@ async function main(): Promise<void> {
     trades,
     tradeStats,
     matcher,
+    matchFailures,
     regions,
     recorder: new JobRunRecorder(new PrismaJobRunStore(prisma), logger),
     logger,

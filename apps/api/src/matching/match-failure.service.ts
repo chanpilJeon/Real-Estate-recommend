@@ -39,6 +39,14 @@ export class MatchFailureService {
     return this.repository.listPendingFailures(Math.max(1, page), Math.min(Math.max(1, pageSize), 100));
   }
 
+  /**
+   * 이미 해결된 실패 기록을 닫는다.
+   * 수집이 끝날 때마다 부른다 — 그 사이에 단지가 새로 생겨 저절로 붙은 것들이 있다.
+   */
+  closeAlreadyMatched(): Promise<number> {
+    return this.repository.closeAlreadyMatched();
+  }
+
   countPending(): Promise<number> {
     return this.repository.countPending();
   }

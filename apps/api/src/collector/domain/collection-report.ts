@@ -16,6 +16,8 @@ export interface CollectionReport {
   unmatchedTrades: number;
   /** 새로 쌓인 매칭 실패 종류 수 */
   matchFailures: number;
+  /** 이번 수집으로 저절로 해결되어 닫은 과거 실패 기록 수 */
+  matchFailuresClosed: number;
   errors: string[];
   durationMs: number;
 }
@@ -34,6 +36,7 @@ export function emptyReport(): CollectionReport {
     rentsSkipped: 0,
     unmatchedTrades: 0,
     matchFailures: 0,
+    matchFailuresClosed: 0,
     errors: [],
     durationMs: 0,
   };

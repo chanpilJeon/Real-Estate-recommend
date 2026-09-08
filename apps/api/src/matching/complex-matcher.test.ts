@@ -69,6 +69,10 @@ class FakeMatchRepository implements IMatchRepository {
   markResolved(): Promise<void> {
     return Promise.resolve();
   }
+  closeAlreadyMatched(): Promise<number> {
+    return Promise.resolve(0);
+  }
+
   countPending(): Promise<number> {
     return Promise.resolve(this.failures.length);
   }

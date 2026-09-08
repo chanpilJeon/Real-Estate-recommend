@@ -95,6 +95,10 @@ function buildDeps(overrides: Partial<CollectorDeps> = {}): {
         spies.invalidateCalls += 1;
       },
     } as unknown as CollectorDeps['tradeStats'],
+    matchFailures: {
+      // 수집이 끝나면 저절로 해결된 실패 기록을 닫는다
+      closeAlreadyMatched: () => Promise.resolve(0),
+    } as unknown as CollectorDeps['matchFailures'],
     matcher: {
       resetCache: () => {
         spies.resetCacheCalls += 1;

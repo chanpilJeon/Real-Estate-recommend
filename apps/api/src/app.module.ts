@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 
+import { AdminModule } from './admin';
 import { AdminAuthModule } from './admin-auth';
 import { CollectorModule } from './collector';
 import { ComplexModule } from './complex';
@@ -38,6 +39,7 @@ import { TradeModule } from './trade';
     PoiModule,
     RecommendationModule,
     AdminAuthModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [],

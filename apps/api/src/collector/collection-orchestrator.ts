@@ -3,7 +3,7 @@ import { normalizeJibun } from '@apt/shared';
 import { normalizeComplexName, type ComplexUpsertInput, type IComplexRepository } from '../complex';
 import type { ILogger } from '../core';
 import type { IComplexInfoClient, IGeocodeClient, IMolitClient, RawTrade, RawRent } from '../external';
-import type { ComplexMatcher } from '../matching';
+import type { ComplexMatcher, MatchFailureService } from '../matching';
 import type { JobRunRecorder, JobContext } from '../observability';
 import type { RegionSearchService } from '../region';
 import type { ITradeRepository, TradeStatsService, TradeUpsertInput, RentUpsertInput } from '../trade';
@@ -30,6 +30,7 @@ export interface CollectorDeps {
   trades: ITradeRepository;
   tradeStats: TradeStatsService;
   matcher: ComplexMatcher;
+  matchFailures: MatchFailureService;
   regions: RegionSearchService;
   recorder: JobRunRecorder;
   logger: ILogger;
@@ -114,6 +115,10 @@ export class CollectionOrchestrator {
 
         // 새 데이터가 들어왔으므로 가격 집계 캐시를 버린다
         this.deps.tradeStats.invalidateCache();
+
+        // 이번에 단지가 새로 생겨 저절로 붙은 것들이 있다. 그 실패 기록을 닫는다 —
+        // 안 닫으면 대시보드가 **이미 끝난 일을 할 일로 보여준다.**
+        report.matchFailuresClosed = await this.deps.matchFailures.closeAlreadyMatched();
 
         report.monthsProcessed = months.length;
         report.durationMs = Date.now() - startedAt;

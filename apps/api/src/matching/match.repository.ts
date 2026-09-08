@@ -42,6 +42,16 @@ export interface IMatchRepository {
   listPendingFailures(page: number, pageSize: number): Promise<PaginatedDto<MatchFailureRecord>>;
   findFailure(id: number): Promise<MatchFailureRecord | null>;
   markResolved(id: number, complexId: number): Promise<void>;
+  /**
+   * 더 이상 남아 있지 않은 실패 기록을 닫는다.
+   *
+   * 실패는 "그때 못 붙였다"는 기록이라, 나중에 다른 경로로 거래가 붙어도 그대로 남는다.
+   * 그러면 대시보드가 **이미 끝난 일을 할 일로 보여준다.** 사람을 헛되이 부르지 않도록,
+   * 그 이름의 미매칭 거래가 하나도 없으면 자동으로 닫는다.
+   *
+   * @returns 닫은 건수
+   */
+  closeAlreadyMatched(): Promise<number>;
   countPending(): Promise<number>;
 }
 export const MATCH_REPOSITORY = Symbol('IMatchRepository');

@@ -113,6 +113,28 @@ export class PrismaMatchRepository implements IMatchRepository {
     });
   }
 
+  /** 그 이름으로 남아 있는 미매칭 거래·전월세가 없으면 닫는다 */
+  async closeAlreadyMatched(): Promise<number> {
+    const result = await this.prisma.$executeRaw`
+      UPDATE match_failures mf
+      SET mf.resolved_at = NOW()
+      WHERE mf.resolved_at IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM trades t
+          WHERE t.complex_id IS NULL
+            AND t.region_code = mf.region_code
+            AND t.raw_name = mf.raw_name
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM rents r
+          WHERE r.complex_id IS NULL
+            AND r.region_code = mf.region_code
+            AND r.raw_name = mf.raw_name
+        )
+    `;
+    return Number(result);
+  }
+
   countPending(): Promise<number> {
     return this.prisma.matchFailure.count({ where: { resolvedAt: null } });
   }

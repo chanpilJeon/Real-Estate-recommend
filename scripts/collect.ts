@@ -28,6 +28,7 @@ import { FakeComplexInfoClient } from '../apps/api/src/external/fake/fake-comple
 import { FakeGeocodeClient } from '../apps/api/src/external/fake/fake-geocode.client';
 import { FakeMolitClient } from '../apps/api/src/external/fake/fake-molit.client';
 import { ComplexMatcher } from '../apps/api/src/matching/complex-matcher';
+import { MatchFailureService } from '../apps/api/src/matching/match-failure.service';
 import { PrismaMatchRepository } from '../apps/api/src/matching/prisma-match.repository';
 import { ApiQuotaTracker } from '../apps/api/src/observability/api-quota-tracker';
 import { JobRunRecorder } from '../apps/api/src/observability/job-run-recorder';
@@ -117,13 +118,16 @@ async function main(): Promise<void> {
       builtYear: c.builtYear,
     }));
 
+  const matchRepository = new PrismaMatchRepository(prisma);
   const matcher = new ComplexMatcher(
     {
       byRegion: async (code) => lighten(await complexes.findByRegion(RegionCode.parse(code))),
       bySigungu: async (code) => lighten(await complexes.findByRegionPrefix(code)),
     },
-    new PrismaMatchRepository(prisma),
+    matchRepository,
   );
+
+  const matchFailures = new MatchFailureService(matchRepository, trades, logger);
 
   const orchestrator = new CollectionOrchestrator({
     molit: config.demoMode ? new FakeMolitClient() : new MolitHttpClient(config, quota, logger),
@@ -137,6 +141,7 @@ async function main(): Promise<void> {
     trades,
     tradeStats,
     matcher,
+    matchFailures,
     regions: new RegionSearchService(new PrismaRegionRepository(prisma)),
     recorder: new JobRunRecorder(new PrismaJobRunStore(prisma), logger),
     logger,
