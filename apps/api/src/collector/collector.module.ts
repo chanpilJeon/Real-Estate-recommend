@@ -16,6 +16,7 @@ import { JobRunRecorder } from '../observability';
 import { RegionModule, RegionSearchService } from '../region';
 import { TRADE_REPOSITORY, TradeModule, TradeStatsService, type ITradeRepository } from '../trade';
 
+import { CatchUpCollectionJob } from './catch-up.job';
 import { CollectionOrchestrator } from './collection-orchestrator';
 import { DailyCollectionJob } from './daily-collection.job';
 
@@ -69,6 +70,7 @@ import { DailyCollectionJob } from './daily-collection.job';
       ],
     },
     DailyCollectionJob,
+    CatchUpCollectionJob,
   ],
   exports: [CollectionOrchestrator],
 })
