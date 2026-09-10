@@ -22,6 +22,12 @@ export class SearchCondition {
     readonly minHouseholds: number | null,
     readonly page: number,
     readonly pageSize: number,
+    /**
+     * 면적 하한을 사용자가 고른 것이 아니라 **우리가 기본값으로 채웠는가.**
+     * 이 둘을 구분하지 않으면 "사용자가 면적을 지정했다"고 오인해
+     * 평형대별 예산 판정을 건너뛰게 된다.
+     */
+    readonly minAreaIsDefault = false,
   ) {}
 
   static from(dto: SearchConditionDto & { page?: number; pageSize?: number }): SearchCondition {
@@ -70,6 +76,7 @@ export class SearchCondition {
       this.minHouseholds,
       this.page,
       this.pageSize,
+      true, // 사용자가 고른 것이 아니다
     );
   }
 

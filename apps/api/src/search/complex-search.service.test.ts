@@ -50,8 +50,13 @@ class FakeEventStore implements ISearchEventStore {
   }
 }
 
-/** medianPricesByComplex 만 흉내내는 최소 가짜 */
-const fakeStats = (medians: Record<number, number>) =>
+/**
+ * 가격 계산만 흉내내는 최소 가짜.
+ *
+ * `byArea` 를 주면 단지의 **평형대별 중위가**를 흉내낼 수 있다 —
+ * 전체 중위가는 예산을 넘어도 예산에 드는 평형이 있으면 남아야 하기 때문이다.
+ */
+const fakeStats = (medians: Record<number, number>, byArea: Record<number, number[]> = {}) =>
   ({
     medianPricesByComplex: (ids: number[]) =>
       Promise.resolve(
@@ -60,6 +65,10 @@ const fakeStats = (medians: Record<number, number>) =>
             .filter((id) => medians[id] !== undefined)
             .map((id) => [id, Money.fromManwon(medians[id]!)]),
         ),
+      ),
+    medianPricesByArea: (ids: number[]) =>
+      Promise.resolve(
+        new Map(ids.filter((id) => byArea[id] !== undefined).map((id) => [id, byArea[id]!])),
       ),
   }) as unknown as ConstructorParameters<typeof ComplexSearchService>[1];
 
@@ -72,8 +81,17 @@ describe('ComplexSearchService — 조건 검색', () => {
     events = new FakeEventStore();
   });
 
-  const build = (complexes: Complex[], medians: Record<number, number>) =>
-    new ComplexSearchService(new FakeSearchRepository(complexes), fakeStats(medians), events, logger);
+  const build = (
+    complexes: Complex[],
+    medians: Record<number, number>,
+    byArea: Record<number, number[]> = {},
+  ) =>
+    new ComplexSearchService(
+      new FakeSearchRepository(complexes),
+      fakeStats(medians, byArea),
+      events,
+      logger,
+    );
 
   describe('예산 필터', () => {
     const complexes = [makeComplex(1, '싼단지'), makeComplex(2, '중간단지'), makeComplex(3, '비싼단지')];
@@ -87,6 +105,41 @@ describe('ComplexSearchService — 조건 검색', () => {
 
       expect(result.items.map((i) => i.name)).toEqual(['싼단지', '중간단지']);
       expect(result.total).toBe(2);
+    });
+
+    it('큰 평형 때문에 중위가가 높아진 단지를 통째로 빼지 않는다 ★', async () => {
+      /*
+        실제로 겪은 일: 광교아이파크는 최근 6개월에 10.7억~17.85억 거래가 31건 있는데
+        전체 중위가가 15.5억이라 "예산 15억" 검색에서 통째로 빠졌다.
+        15억으로 살 수 있는 평형이 분명히 있는데도 그렇다.
+        서울·경기에서 이런 단지가 115곳이었다.
+      */
+      const service = build(complexes, medians, { 3: [60_000, 90_000, 120_000] });
+      const result = await service.search(
+        SearchCondition.from({ regionCode: 역삼동, priceMax: 70_000 }),
+      );
+
+      expect(result.items.map((i) => i.name)).toContain('비싼단지');
+    });
+
+    it('그렇게 남은 단지는 **예산으로 살 수 있는 평형**의 가격을 보여준다', async () => {
+      // 중위가 9억을 그대로 띄우면 "예산 7억인데 왜 9억이 나오지?" 가 된다
+      const service = build(complexes, medians, { 3: [60_000, 90_000, 120_000] });
+      const result = await service.search(
+        SearchCondition.from({ regionCode: 역삼동, priceMax: 70_000 }),
+      );
+
+      const 비싼단지 = result.items.find((i) => i.name === '비싼단지');
+      expect(비싼단지?.medianPriceManwon).toBe(60_000);
+    });
+
+    it('예산에 드는 평형이 하나도 없으면 그대로 뺀다', async () => {
+      const service = build(complexes, medians, { 3: [85_000, 90_000] });
+      const result = await service.search(
+        SearchCondition.from({ regionCode: 역삼동, priceMax: 70_000 }),
+      );
+
+      expect(result.items.map((i) => i.name)).not.toContain('비싼단지');
     });
 
     it('경계값을 포함한다', async () => {

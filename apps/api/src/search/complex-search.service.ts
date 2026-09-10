@@ -1,4 +1,4 @@
-import type { ComplexSummaryDto, PaginatedDto } from '@apt/shared';
+import { Money, type ComplexSummaryDto, type PaginatedDto } from '@apt/shared';
 
 import type { Complex } from '../complex';
 import type { ILogger } from '../core';
@@ -79,11 +79,50 @@ export class ComplexSearchService {
     // 3) 예산으로 거른다. 거래가 없어 중위가를 모르는 단지는
     //    예산 조건이 걸려 있으면 뺀다 — "예산에 맞는지 알 수 없음"을 맞는다고 보면 안 된다.
     const budgetGiven = !condition.priceRange.isUnbounded();
+
+    /*
+      예산은 **평형대별로** 본다.
+
+      단지 전체 중위가로 거르면 큰 평형 때문에 중위가가 올라간 단지가 통째로 사라진다.
+      광교아이파크는 최근 6개월에 10.7억~17.85억 거래가 31건 있는데 중위가가 15.5억이라
+      "예산 15억" 검색에서 빠졌다 — 15억으로 살 수 있는 평형이 분명히 있는데도.
+      서울·경기에서 이런 단지가 115곳이었다.
+
+      사용자가 면적을 직접 골랐다면 그 면적대의 중위가가 이미 위에서 계산됐으므로
+      평형대를 다시 나누지 않는다.
+    */
+    const areaChosen =
+      (condition.areaRange.min !== null && !condition.minAreaIsDefault) ||
+      condition.areaRange.max !== null;
+    const byArea =
+      budgetGiven && !areaChosen
+        ? await this.tradeStats.medianPricesByArea(candidates.map((c) => c.id))
+        : new Map<number, number[]>();
+
+    /** 예산 안에서 살 수 있는 **가장 좋은 평형**의 가격. 없으면 null */
+    const affordable = (complexId: number): number | null => {
+      const inRange = (byArea.get(complexId) ?? []).filter((manwon) =>
+        condition.priceRange.contains(Money.fromManwon(manwon)),
+      );
+      return inRange.length === 0 ? null : inRange[inRange.length - 1]!;
+    };
+
     const filtered = candidates.filter((complex) => {
       const median = medians.get(complex.id);
       if (median === undefined) return !budgetGiven;
-      return condition.priceRange.contains(median);
+      if (condition.priceRange.contains(median)) return true;
+      // 전체 중위가는 넘어도 예산에 드는 평형이 있으면 남긴다
+      return affordable(complex.id) !== null;
     });
+
+    // 예산 때문에 남은 단지는 **그 예산으로 살 수 있는 평형의 가격**을 보여준다.
+    // 중위가 15.5억을 그대로 띄우면 "예산 15억인데 왜 15.5억이 나오지?" 가 된다.
+    for (const complex of filtered) {
+      const median = medians.get(complex.id);
+      if (median !== undefined && condition.priceRange.contains(median)) continue;
+      const price = affordable(complex.id);
+      if (price !== null) medians.set(complex.id, Money.fromManwon(price));
+    }
 
     /*
       **왜 결과가 적은지 설명할 재료를 함께 돌려준다.**
@@ -93,12 +132,10 @@ export class ComplexSearchService {
       "왜 중흥S-클래스가 안 보이지?" 하며 서비스를 믿지 않게 된다.
       비어 있거나 적은 결과는 **이유와 함께** 보여줘야 한다.
     */
+    const kept = new Set(filtered.map((c) => c.id));
     const overBudget = budgetGiven
       ? candidates
-          .filter((complex) => {
-            const median = medians.get(complex.id);
-            return median !== undefined && !condition.priceRange.contains(median);
-          })
+          .filter((complex) => !kept.has(complex.id) && medians.get(complex.id) !== undefined)
           .map((complex) => ({ complex, manwon: medians.get(complex.id)!.toManwon() }))
       : [];
 

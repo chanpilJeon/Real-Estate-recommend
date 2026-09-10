@@ -112,6 +112,52 @@ export class TradeStatsService {
     return medians;
   }
 
+  /**
+   * 면적대별 중위가 (단지당 여러 개).
+   *
+   * 왜 필요한가: 예산 필터를 **단지 전체 중위가**로 걸면, 큰 평형 때문에 중위가가 올라간
+   * 단지가 통째로 사라진다. 광교아이파크는 최근 6개월에 10.7억~17.85억 거래가 31건 있는데
+   * 중위가가 15.5억이라 "예산 15억" 검색에서 빠졌다 — 15억으로 살 수 있는 평형이
+   * 분명히 있는데도 그렇다. 서울·경기에서 이런 단지가 115곳이었다.
+   *
+   * 구간은 화면의 면적 칩과 같게 맞춘다 (~60 / 60~85 / 85~102 / 102~135 / 135~).
+   * 거래를 한 번만 읽어 앱에서 나누므로 질의는 늘지 않는다.
+   */
+  async medianPricesByArea(
+    complexIds: number[],
+    months = DEFAULT_MEDIAN_MONTHS,
+  ): Promise<Map<number, number[]>> {
+    if (complexIds.length === 0) return new Map();
+
+    const trades = await this.repository.findTradesForComplexes(complexIds, this.monthsAgo(months));
+
+    const grouped = new Map<number, Map<number, number[]>>();
+    for (const trade of trades) {
+      if (trade.complexId === null) continue;
+      const bucket = areaBucketOf(trade.area.toSqm());
+
+      let byBucket = grouped.get(trade.complexId);
+      if (byBucket === undefined) {
+        byBucket = new Map();
+        grouped.set(trade.complexId, byBucket);
+      }
+      const prices = byBucket.get(bucket);
+      if (prices === undefined) byBucket.set(bucket, [trade.price.toManwon()]);
+      else prices.push(trade.price.toManwon());
+    }
+
+    const result = new Map<number, number[]>();
+    for (const [complexId, byBucket] of grouped) {
+      const medians: number[] = [];
+      for (const prices of byBucket.values()) {
+        const median = medianExcludingOutliers(prices);
+        if (median !== null) medians.push(median.median);
+      }
+      if (medians.length > 0) result.set(complexId, medians.sort((a, b) => a - b));
+    }
+    return result;
+  }
+
   /** 추천의 유동성 지표. 후보 전체를 한 번 조회하며 취소 거래는 저장소에서 제외된다. */
   async annualTradeCounts(complexIds: number[]): Promise<Map<number, number>> {
     const rows = await this.repository.findTradesForComplexes(
@@ -215,4 +261,14 @@ export class TradeStatsService {
   private cached<T>(key: string, compute: () => Promise<T>): Promise<T> {
     return this.cache.through(key, compute as () => Promise<unknown>) as Promise<T>;
   }
+}
+
+/** 화면의 면적 칩과 같은 구간 (전용 ㎡) */
+const AREA_BUCKET_EDGES = [60, 85, 102, 135];
+
+function areaBucketOf(sqm: number): number {
+  for (let i = 0; i < AREA_BUCKET_EDGES.length; i += 1) {
+    if (sqm < AREA_BUCKET_EDGES[i]!) return i;
+  }
+  return AREA_BUCKET_EDGES.length;
 }
