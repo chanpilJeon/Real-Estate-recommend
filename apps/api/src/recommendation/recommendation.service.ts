@@ -1,7 +1,7 @@
 import type { PaginatedDto, PresetName, RecommendationDto } from '@apt/shared';
 import { Injectable } from '@nestjs/common';
 
-import { ComplexSearchService, SearchCondition } from '../search';
+import { ComplexSearchService, SearchCondition, buildResultNote } from '../search';
 import { TradeStatsService } from '../trade';
 
 import { ScoringPolicy } from './scoring-policy';
@@ -25,7 +25,7 @@ export class RecommendationService {
   ): Promise<PaginatedDto<RecommendationDto>> {
     // 조건을 안 넣은 사람에게 원룸형 주택을 추천하지 않는다 (사용자가 정했으면 그대로 둔다)
     const effective = condition.withDefaultMinArea(MIN_RECOMMENDED_SQM);
-    const { filtered, medians } = await this.search.findEligible(effective);
+    const { filtered, medians, excluded } = await this.search.findEligible(effective);
     const counts = await this.stats.annualTradeCounts(filtered.map((c) => c.id));
     const policy = ScoringPolicy.preset(preset);
     const now = new Date();
@@ -67,6 +67,15 @@ export class RecommendationService {
       total: ranked.length,
       page: effective.page,
       pageSize: effective.pageSize,
+      // 왜 이만큼만 나왔는지 함께 말한다 — 자기가 아는 단지가 안 보이면 서비스를 의심하게 된다
+      note:
+        buildResultNote({
+          totalCandidates: excluded.totalCandidates,
+          shown: ranked.length,
+          overBudget: excluded.overBudget,
+          nearestOverBudget: excluded.nearestOverBudget,
+          budgetMaxManwon: effective.priceRange.max?.toManwon() ?? null,
+        }) ?? undefined,
     };
   }
 }

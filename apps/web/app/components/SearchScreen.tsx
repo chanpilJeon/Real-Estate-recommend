@@ -36,6 +36,8 @@ export function SearchScreen() {
   const [region, setRegion] = useState<RegionCandidateDto | null>(null);
   const [items, setItems] = useState<(ComplexSummaryDto | RecommendationDto)[]>([]);
   const [total, setTotal] = useState(0);
+  /** "왜 결과가 이것뿐인지" 서버가 만들어 준 문장 */
+  const [note, setNote] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -96,6 +98,7 @@ export function SearchScreen() {
     if (regionCode === '') {
       setItems([]);
       setTotal(0);
+      setNote(undefined);
       return;
     }
 
@@ -113,12 +116,14 @@ export function SearchScreen() {
         if (!alive) return;
         setItems(result.items);
         setTotal(result.total);
+        setNote(result.note);
       })
       .catch((err: unknown) => {
         if (!alive) return;
         setError(err instanceof ApiError ? err.message : '검색 중 문제가 생겼습니다.');
         setItems([]);
         setTotal(0);
+      setNote(undefined);
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -209,6 +214,7 @@ export function SearchScreen() {
               error={error}
               selectedId={selectedId}
               onSelect={selectComplex}
+              note={note}
             />
             {!loading && error === null && total > 100 && (
               <nav className="pagination" aria-label="결과 페이지">

@@ -4,6 +4,7 @@ import type { Complex } from '../complex';
 import type { ILogger } from '../core';
 import type { TradeStatsService } from '../trade';
 
+import { buildResultNote } from './domain/result-note';
 import type { SearchCondition } from './domain/search-condition';
 import type { CollectedRegion, ISearchEventStore, ISearchRepository } from './search.repository';
 
@@ -32,7 +33,7 @@ export class ComplexSearchService {
     condition: SearchCondition,
     sort: SortKey = 'price',
   ): Promise<PaginatedDto<ComplexSummaryDto>> {
-    const { filtered, medians } = await this.findEligible(condition);
+    const { filtered, medians, excluded } = await this.findEligible(condition);
 
     const sorted = this.sortBy(filtered, medians, sort);
     const total = sorted.length;
@@ -43,7 +44,20 @@ export class ComplexSearchService {
 
     void this.recordEvent(condition, total);
 
-    return { items, total, page: condition.page, pageSize: condition.pageSize };
+    return {
+      items,
+      total,
+      page: condition.page,
+      pageSize: condition.pageSize,
+      note:
+        buildResultNote({
+          totalCandidates: excluded.totalCandidates,
+          shown: total,
+          overBudget: excluded.overBudget,
+          nearestOverBudget: excluded.nearestOverBudget,
+          budgetMaxManwon: condition.priceRange.max?.toManwon() ?? null,
+        }) ?? undefined,
+    };
   }
 
   /** 추천도 동일한 하드 필터를 사용한다. 페이지를 자르기 전에 전체 후보를 반환한다. */
@@ -71,7 +85,42 @@ export class ComplexSearchService {
       return condition.priceRange.contains(median);
     });
 
-    return { filtered, medians };
+    /*
+      **왜 결과가 적은지 설명할 재료를 함께 돌려준다.**
+
+      "광교, 예산 10억"으로 찾으면 63곳 중 18곳만 남는다. 나머지는 예산을 넘어서인데,
+      그 사실을 말해주지 않으면 사용자는 "광교에 아파트가 18개뿐인가?" 하고 오해하거나
+      "왜 중흥S-클래스가 안 보이지?" 하며 서비스를 믿지 않게 된다.
+      비어 있거나 적은 결과는 **이유와 함께** 보여줘야 한다.
+    */
+    const overBudget = budgetGiven
+      ? candidates
+          .filter((complex) => {
+            const median = medians.get(complex.id);
+            return median !== undefined && !condition.priceRange.contains(median);
+          })
+          .map((complex) => ({ complex, manwon: medians.get(complex.id)!.toManwon() }))
+      : [];
+
+    const max = condition.priceRange.max?.toManwon() ?? null;
+    // 예산을 넘긴 것 중 **가장 가까운 것** — "조금만 올리면 이게 보인다"를 말해주기 위해
+    const nearest =
+      max === null
+        ? null
+        : overBudget
+            .filter((row) => row.manwon > max)
+            .sort((a, b) => a.manwon - b.manwon)[0] ?? null;
+
+    return {
+      filtered,
+      medians,
+      excluded: {
+        totalCandidates: candidates.length,
+        overBudget: overBudget.length,
+        nearestOverBudget:
+          nearest === null ? null : { name: nearest.complex.name, medianPriceManwon: nearest.manwon },
+      },
+    };
   }
 
   /** 데이터가 실제로 쌓인 지역 목록 (검색 결과가 비었을 때 안내용) */

@@ -14,6 +14,11 @@ export interface PaginatedDto<T> {
   total: number;
   page: number;
   pageSize: number;
+  /**
+   * "왜 결과가 이것뿐인지"를 사람이 읽는 한 문장.
+   * 설명할 것이 없으면 없다 — 굳이 문장으로 화면을 채우지 않는다.
+   */
+  note?: string;
 }
 
 /** 검색 조건 — HTTP 쿼리스트링에서 파싱된다 */

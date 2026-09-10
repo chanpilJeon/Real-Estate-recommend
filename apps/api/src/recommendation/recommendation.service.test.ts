@@ -18,6 +18,7 @@ it('가장 높은 점수의 101번째 후보도 페이지 자르기 전에 평�
   }));
   const search = {
     findEligible: vi.fn().mockResolvedValue({
+      excluded: { totalCandidates: 0, overBudget: 0, nearestOverBudget: null },
       filtered,
       medians: new Map(filtered.map((c) => [c.id, Money.fromManwon(80000)])),
     }),
@@ -41,7 +42,7 @@ it('가장 높은 점수의 101번째 후보도 페이지 자르기 전에 평�
 describe('빈 추천', () => {
   it('자료가 없으면 빈 결과와 0건을 반환한다', async () => {
     const service = new RecommendationService(
-      { findEligible: async () => ({ filtered: [], medians: new Map() }) } as any,
+      { findEligible: async () => ({ filtered: [], medians: new Map(), excluded: { totalCandidates: 0, overBudget: 0, nearestOverBudget: null } }) } as any,
       { annualTradeCounts: async () => new Map() } as any,
     );
     const result = await service.recommend(
